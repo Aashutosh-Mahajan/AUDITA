@@ -14,10 +14,10 @@ import pandas as pd
 from audita.core.audit_log import log_code_action
 from audita.core.cleaning_registry import execute_cleaning_action
 from audita.core.schemas import (
+    AuditLogEntry,
     CleaningAction,
     CleaningActionType,
     CleaningDiffEntry,
-    AuditLogEntry,
 )
 
 
@@ -35,12 +35,18 @@ def _column_stats(df: pd.DataFrame, col: str) -> dict[str, Any]:
     }
 
     if pd.api.types.is_numeric_dtype(series):
-        stats.update({
-            "mean": round(float(series.mean()), 4) if not series.isna().all() else None,
-            "std": round(float(series.std()), 4) if not series.isna().all() else None,
-            "min": float(series.min()) if not series.isna().all() else None,
-            "max": float(series.max()) if not series.isna().all() else None,
-        })
+        stats.update(
+            {
+                "mean": round(float(series.mean()), 4)
+                if not series.isna().all()
+                else None,
+                "std": round(float(series.std()), 4)
+                if not series.isna().all()
+                else None,
+                "min": float(series.min()) if not series.isna().all() else None,
+                "max": float(series.max()) if not series.isna().all() else None,
+            }
+        )
 
     return stats
 

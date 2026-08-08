@@ -8,11 +8,9 @@ to produce the post-cleaning profile so before/after are directly comparable.
 
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
-from audita.core.schemas import AuditLogEntry
 
 
 def compute_column_audit(df: pd.DataFrame) -> dict[str, Any]:
@@ -40,23 +38,25 @@ def compute_column_audit(df: pd.DataFrame) -> dict[str, Any]:
             upper = q3 + 1.5 * iqr
             outlier_count = int(((series < lower) | (series > upper)).sum())
 
-            col_info.update({
-                "mean": round(float(desc.get("mean", 0)), 4),
-                "std": round(float(desc.get("std", 0)), 4),
-                "min": float(desc.get("min", 0)),
-                "max": float(desc.get("max", 0)),
-                "iqr_outlier_count": outlier_count,
-            })
+            col_info.update(
+                {
+                    "mean": round(float(desc.get("mean", 0)), 4),
+                    "std": round(float(desc.get("std", 0)), 4),
+                    "min": float(desc.get("min", 0)),
+                    "max": float(desc.get("max", 0)),
+                    "iqr_outlier_count": outlier_count,
+                }
+            )
 
-        elif pd.api.types.is_string_dtype(series) or pd.api.types.is_object_dtype(series):
+        elif pd.api.types.is_string_dtype(series) or pd.api.types.is_object_dtype(
+            series
+        ):
             # String/categorical column stats
             non_null = series.dropna()
 
             # Top value counts (up to 10)
             top_counts = non_null.value_counts().head(10)
-            col_info["top_values"] = {
-                str(k): int(v) for k, v in top_counts.items()
-            }
+            col_info["top_values"] = {str(k): int(v) for k, v in top_counts.items()}
 
             # Fuzzy near-duplicate label detection
             unique_vals = [str(v) for v in non_null.unique()]
@@ -88,26 +88,30 @@ def _find_near_duplicates(
         from rapidfuzz import fuzz
 
         for i, a in enumerate(values):
-            for b in values[i + 1:]:
+            for b in values[i + 1 :]:
                 similarity = fuzz.ratio(a.lower(), b.lower()) / 100.0
                 if similarity >= threshold and a.lower() != b.lower():
-                    pairs.append({
-                        "value_a": a,
-                        "value_b": b,
-                        "similarity": round(similarity, 3),
-                    })
+                    pairs.append(
+                        {
+                            "value_a": a,
+                            "value_b": b,
+                            "similarity": round(similarity, 3),
+                        }
+                    )
     except ImportError:
         from difflib import SequenceMatcher
 
         for i, a in enumerate(values):
-            for b in values[i + 1:]:
+            for b in values[i + 1 :]:
                 similarity = SequenceMatcher(None, a.lower(), b.lower()).ratio()
                 if similarity >= threshold and a.lower() != b.lower():
-                    pairs.append({
-                        "value_a": a,
-                        "value_b": b,
-                        "similarity": round(similarity, 3),
-                    })
+                    pairs.append(
+                        {
+                            "value_a": a,
+                            "value_b": b,
+                            "similarity": round(similarity, 3),
+                        }
+                    )
 
     return pairs
 
@@ -138,7 +142,8 @@ def quality_audit(state: dict) -> dict:
         detail={
             "columns_audited": len(audit_result),
             "columns_with_issues": sum(
-                1 for col_info in audit_result.values()
+                1
+                for col_info in audit_result.values()
                 if col_info.get("missing_pct", 0) > 0
                 or col_info.get("iqr_outlier_count", 0) > 0
                 or col_info.get("near_duplicate_labels")

@@ -7,17 +7,16 @@ is ever run. Each handler takes (df, action) and returns a (possibly modified)
 copy of the DataFrame.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
-import numpy as np
 import pandas as pd
 
 from audita.core.schemas import CleaningAction, CleaningActionType
 
-
 # ---------------------------------------------------------------------------
 # Handler implementations
 # ---------------------------------------------------------------------------
+
 
 def _impute_mean(df: pd.DataFrame, action: CleaningAction) -> pd.DataFrame:
     """Replace NaN values in a numeric column with the column mean."""
@@ -74,6 +73,7 @@ def _standardize_categories(df: pd.DataFrame, action: CleaningAction) -> pd.Data
     threshold = action.params.get("fuzzy_threshold", 0.85)
     try:
         from rapidfuzz import fuzz
+
         unique_vals = df[col].unique().tolist()
         # Build a mapping from near-duplicate → canonical (first occurrence wins)
         mapping: dict[str, str] = {}
@@ -156,9 +156,7 @@ CLEANING_REGISTRY: dict[
 }
 
 
-def execute_cleaning_action(
-    df: pd.DataFrame, action: CleaningAction
-) -> pd.DataFrame:
+def execute_cleaning_action(df: pd.DataFrame, action: CleaningAction) -> pd.DataFrame:
     """Look up and execute a cleaning action from the registry.
 
     Raises ``KeyError`` if the action type is not registered.

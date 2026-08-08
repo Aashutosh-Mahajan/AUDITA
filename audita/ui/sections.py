@@ -9,24 +9,23 @@ Sections:
 4. Collapsible full audit log
 """
 
-import json
 from typing import Any
 
 import plotly.io as pio
 import streamlit as st
 
 from audita.ui.components import (
-    stats_row,
-    quality_comparison_card,
-    cleaning_diff_table,
-    verification_badge,
     audit_log_section,
+    cleaning_diff_table,
+    quality_comparison_card,
+    stats_row,
+    verification_badge,
 )
-
 
 # ---------------------------------------------------------------------------
 # Section 1: Data Quality Summary
 # ---------------------------------------------------------------------------
+
 
 def render_quality_summary(dashboard: dict[str, Any]) -> None:
     """Render before/after data quality comparison."""
@@ -45,7 +44,9 @@ def render_quality_summary(dashboard: dict[str, Any]) -> None:
     stats = {
         "Total Rows": raw_profile.get("n_rows", "—"),
         "Total Columns": raw_profile.get("n_cols", "—"),
-        "Cleaning Actions": dashboard.get("stats", {}).get("cleaning_actions_applied", 0),
+        "Cleaning Actions": dashboard.get("stats", {}).get(
+            "cleaning_actions_applied", 0
+        ),
         "Charts Generated": dashboard.get("stats", {}).get("total_charts", 0),
     }
     stats_row(stats)
@@ -65,6 +66,7 @@ def render_quality_summary(dashboard: dict[str, Any]) -> None:
 # Section 2: Cleaning Diff
 # ---------------------------------------------------------------------------
 
+
 def render_cleaning_diff(dashboard: dict[str, Any]) -> None:
     """Render the cleaning diff table with action rationale."""
     st.markdown("## 🔧 Cleaning Actions Applied")
@@ -76,6 +78,7 @@ def render_cleaning_diff(dashboard: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Section 3: Visualizations by Category
 # ---------------------------------------------------------------------------
+
 
 def render_charts(dashboard: dict[str, Any]) -> None:
     """Render charts grouped by category with verification badges."""
@@ -91,11 +94,11 @@ def render_charts(dashboard: dict[str, Any]) -> None:
     categories = list(charts_by_category.keys())
     tabs = st.tabs([f"📌 {cat.title()}" for cat in categories])
 
-    for tab, category in zip(tabs, categories):
+    for tab, category in zip(tabs, categories, strict=False):
         with tab:
             charts = charts_by_category[category]
 
-            for i, chart in enumerate(charts):
+            for chart in charts:
                 with st.container():
                     # Header with verification badge
                     col1, col2 = st.columns([3, 1])
@@ -131,6 +134,7 @@ def render_charts(dashboard: dict[str, Any]) -> None:
 # Section 4: Audit Log
 # ---------------------------------------------------------------------------
 
+
 def render_audit_log(dashboard: dict[str, Any]) -> None:
     """Render the collapsible full audit log."""
     st.markdown("## 📋 Audit Trail")
@@ -142,6 +146,7 @@ def render_audit_log(dashboard: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Full dashboard renderer
 # ---------------------------------------------------------------------------
+
 
 def render_dashboard(dashboard: dict[str, Any]) -> None:
     """Render the complete AUDITA dashboard from assembled state."""

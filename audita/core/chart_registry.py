@@ -6,7 +6,7 @@ Also contains the dtype compatibility table used by insight_planning to
 validate LLM-proposed visualization intents before they reach this registry.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 import pandas as pd
 import plotly.express as px
@@ -14,10 +14,10 @@ import plotly.graph_objects as go
 
 from audita.core.schemas import ChartType, VizIntent
 
-
 # ---------------------------------------------------------------------------
 # Dtype compatibility table (deterministic, not LLM)
 # ---------------------------------------------------------------------------
+
 
 def _is_numeric(series: pd.Series) -> bool:
     return pd.api.types.is_numeric_dtype(series)
@@ -37,12 +37,11 @@ def _is_datetime(series: pd.Series) -> bool:
 
 class DtypeCompatibilityError(Exception):
     """Raised when a chart type is incompatible with the given column dtypes."""
+
     pass
 
 
-def validate_chart_compatibility(
-    df: pd.DataFrame, intent: VizIntent
-) -> None:
+def validate_chart_compatibility(df: pd.DataFrame, intent: VizIntent) -> None:
     """Validate that the intent's chart_type is compatible with the column dtypes.
 
     Raises ``DtypeCompatibilityError`` with a descriptive message on failure.
@@ -107,9 +106,15 @@ def validate_chart_compatibility(
 
     elif chart == ChartType.LINE:
         if len(cols) < 2:
-            raise DtypeCompatibilityError("Line chart requires at least 2 columns (x, y)")
+            raise DtypeCompatibilityError(
+                "Line chart requires at least 2 columns (x, y)"
+            )
         # x can be date, numeric, or ordinal; y must be numeric
-        x_ok = _is_numeric(df[cols[0]]) or _is_datetime(df[cols[0]]) or _is_categorical(df[cols[0]])
+        x_ok = (
+            _is_numeric(df[cols[0]])
+            or _is_datetime(df[cols[0]])
+            or _is_categorical(df[cols[0]])
+        )
         if not x_ok:
             raise DtypeCompatibilityError(
                 f"Line chart x-axis must be numeric, datetime, or ordinal, got dtype={df[cols[0]].dtype}"
@@ -124,12 +129,14 @@ def validate_chart_compatibility(
 # Render functions — one per ChartType
 # ---------------------------------------------------------------------------
 
+
 def render_histogram(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
     """Render a histogram for a single numeric column."""
     validate_chart_compatibility(df, intent)
     col = intent.columns[0]
     fig = px.histogram(
-        df, x=col,
+        df,
+        x=col,
         title=f"Distribution of {col}",
         labels={col: col},
     )
@@ -143,12 +150,15 @@ def render_box(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
     cols = intent.columns
     if len(cols) >= 2 and _is_categorical(df[cols[1]]):
         fig = px.box(
-            df, x=cols[1], y=cols[0],
+            df,
+            x=cols[1],
+            y=cols[0],
             title=f"Box Plot of {cols[0]} by {cols[1]}",
         )
     else:
         fig = px.box(
-            df, y=cols[0],
+            df,
+            y=cols[0],
             title=f"Box Plot of {cols[0]}",
         )
     return fig
@@ -164,7 +174,9 @@ def render_bar(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
         # Aggregate: mean of numeric grouped by categorical
         agg = df.groupby(cat_col, observed=True)[cols[1]].mean().reset_index()
         fig = px.bar(
-            agg, x=cat_col, y=cols[1],
+            agg,
+            x=cat_col,
+            y=cols[1],
             title=f"Mean {cols[1]} by {cat_col}",
         )
     else:
@@ -172,7 +184,9 @@ def render_bar(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
         counts = df[cat_col].value_counts().reset_index()
         counts.columns = [cat_col, "count"]
         fig = px.bar(
-            counts, x=cat_col, y="count",
+            counts,
+            x=cat_col,
+            y="count",
             title=f"Count by {cat_col}",
         )
     return fig
@@ -184,7 +198,9 @@ def render_line(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
     cols = intent.columns
     sorted_df = df.sort_values(cols[0])
     fig = px.line(
-        sorted_df, x=cols[0], y=cols[1],
+        sorted_df,
+        x=cols[0],
+        y=cols[1],
         title=f"{cols[1]} over {cols[0]}",
     )
     return fig
@@ -195,7 +211,9 @@ def render_scatter(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
     validate_chart_compatibility(df, intent)
     cols = intent.columns
     fig = px.scatter(
-        df, x=cols[0], y=cols[1],
+        df,
+        x=cols[0],
+        y=cols[1],
         title=f"{cols[1]} vs {cols[0]}",
     )
     return fig
@@ -210,7 +228,8 @@ def render_heatmap(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
         text_auto=".2f",
         title="Correlation Heatmap",
         color_continuous_scale="RdBu_r",
-        zmin=-1, zmax=1,
+        zmin=-1,
+        zmax=1,
     )
     return fig
 
@@ -224,14 +243,18 @@ def render_pie(df: pd.DataFrame, intent: VizIntent) -> go.Figure:
     if len(cols) >= 2 and _is_numeric(df[cols[1]]):
         agg = df.groupby(cat_col, observed=True)[cols[1]].sum().reset_index()
         fig = px.pie(
-            agg, names=cat_col, values=cols[1],
+            agg,
+            names=cat_col,
+            values=cols[1],
             title=f"{cols[1]} by {cat_col}",
         )
     else:
         counts = df[cat_col].value_counts().reset_index()
         counts.columns = [cat_col, "count"]
         fig = px.pie(
-            counts, names=cat_col, values="count",
+            counts,
+            names=cat_col,
+            values="count",
             title=f"Distribution of {cat_col}",
         )
     return fig

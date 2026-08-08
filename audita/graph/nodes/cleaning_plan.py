@@ -6,20 +6,19 @@ enum, validated against real column names. Invalid proposals are rejected
 and logged, not silently coerced.
 """
 
-import json
 from typing import Any
 
 from pydantic import ValidationError
 
-from audita.core.audit_log import log_llm_action, log_code_action
+from audita.core.audit_log import log_code_action, log_llm_action
 from audita.core.llm_client import (
-    request_cleaning_plan,
     _pydantic_list_to_tool_schema,
+    request_cleaning_plan,
 )
 from audita.core.schemas import (
+    AuditLogEntry,
     CleaningAction,
     CleaningActionType,
-    AuditLogEntry,
 )
 
 

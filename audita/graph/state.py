@@ -6,15 +6,15 @@ written to concurrently by parallel ``Send()``-dispatched nodes — this is
 required for LangGraph's fan-in to work correctly.
 """
 
-from typing import TypedDict, Annotated
 import operator
+from typing import Annotated, TypedDict
 
 from audita.core.schemas import (
+    AuditLogEntry,
+    ChartResult,
     CleaningAction,
     CleaningDiffEntry,
     VizIntent,
-    ChartResult,
-    AuditLogEntry,
 )
 
 

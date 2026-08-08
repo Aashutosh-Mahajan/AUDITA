@@ -8,40 +8,63 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from audita.core.schemas import ChartType, VizIntent
 from audita.core.chart_registry import (
     CHART_REGISTRY,
     DtypeCompatibilityError,
     render_chart,
     validate_chart_compatibility,
 )
-
+from audita.core.schemas import ChartType, VizIntent
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_mixed_df() -> pd.DataFrame:
     """DataFrame with numeric, categorical, and date columns."""
-    return pd.DataFrame({
-        "age": [25, 30, 35, 40, 28, 32, 45],
-        "salary": [50000, 60000, 70000, 80000, 55000, 65000, 75000],
-        "department": ["Eng", "HR", "Eng", "Sales", "HR", "Eng", "Sales"],
-        "status": ["active", "active", "inactive", "active", "inactive", "active", "active"],
-        "date": pd.to_datetime(["2024-01-01", "2024-02-01", "2024-03-01",
-                                "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01"]),
-    })
+    return pd.DataFrame(
+        {
+            "age": [25, 30, 35, 40, 28, 32, 45],
+            "salary": [50000, 60000, 70000, 80000, 55000, 65000, 75000],
+            "department": ["Eng", "HR", "Eng", "Sales", "HR", "Eng", "Sales"],
+            "status": [
+                "active",
+                "active",
+                "inactive",
+                "active",
+                "inactive",
+                "active",
+                "active",
+            ],
+            "date": pd.to_datetime(
+                [
+                    "2024-01-01",
+                    "2024-02-01",
+                    "2024-03-01",
+                    "2024-04-01",
+                    "2024-05-01",
+                    "2024-06-01",
+                    "2024-07-01",
+                ]
+            ),
+        }
+    )
 
 
 def _make_string_only_df() -> pd.DataFrame:
     """DataFrame with only string columns — no numeric at all."""
-    return pd.DataFrame({
-        "name": ["Alice", "Bob", "Charlie", "Diana"],
-        "city": ["NYC", "LA", "Chicago", "NYC"],
-    })
+    return pd.DataFrame(
+        {
+            "name": ["Alice", "Bob", "Charlie", "Diana"],
+            "city": ["NYC", "LA", "Chicago", "NYC"],
+        }
+    )
 
 
-def _intent(chart_type: ChartType, columns: list[str], category: str = "test") -> VizIntent:
+def _intent(
+    chart_type: ChartType, columns: list[str], category: str = "test"
+) -> VizIntent:
     return VizIntent(
         chart_type=chart_type,
         columns=columns,
@@ -55,6 +78,7 @@ def _intent(chart_type: ChartType, columns: list[str], category: str = "test") -
 # Registry completeness
 # ---------------------------------------------------------------------------
 
+
 class TestRegistryCompleteness:
     def test_all_chart_types_registered(self):
         for chart_type in ChartType:
@@ -64,6 +88,7 @@ class TestRegistryCompleteness:
 # ---------------------------------------------------------------------------
 # Histogram tests
 # ---------------------------------------------------------------------------
+
 
 class TestHistogram:
     def test_success_on_numeric(self):
@@ -82,6 +107,7 @@ class TestHistogram:
 # ---------------------------------------------------------------------------
 # Box plot tests
 # ---------------------------------------------------------------------------
+
 
 class TestBox:
     def test_success_single_numeric(self):
@@ -107,6 +133,7 @@ class TestBox:
 # Bar chart tests
 # ---------------------------------------------------------------------------
 
+
 class TestBar:
     def test_success_categorical_counts(self):
         df = _make_mixed_df()
@@ -130,6 +157,7 @@ class TestBar:
 # ---------------------------------------------------------------------------
 # Line chart tests
 # ---------------------------------------------------------------------------
+
 
 class TestLine:
     def test_success_date_x_numeric_y(self):
@@ -155,6 +183,7 @@ class TestLine:
 # Scatter plot tests
 # ---------------------------------------------------------------------------
 
+
 class TestScatter:
     def test_success_two_numeric(self):
         df = _make_mixed_df()
@@ -178,6 +207,7 @@ class TestScatter:
 # ---------------------------------------------------------------------------
 # Heatmap tests
 # ---------------------------------------------------------------------------
+
 
 class TestHeatmap:
     def test_success_multiple_numeric(self):
@@ -203,6 +233,7 @@ class TestHeatmap:
 # Pie chart tests
 # ---------------------------------------------------------------------------
 
+
 class TestPie:
     def test_success_categorical(self):
         df = _make_mixed_df()
@@ -226,6 +257,7 @@ class TestPie:
 # ---------------------------------------------------------------------------
 # Validation edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestValidation:
     def test_missing_column_raises_error(self):

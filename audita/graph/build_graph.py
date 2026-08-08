@@ -16,26 +16,26 @@ Key mechanics:
 
 from typing import Any, Literal
 
-from langgraph.graph import StateGraph, END, START
-from langgraph.types import Send
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import Send
 
-from audita.graph.state import PipelineState
-from audita.graph.nodes.ingest import ingest
-from audita.graph.nodes.quality_audit import quality_audit
-from audita.graph.nodes.cleaning_plan import cleaning_plan
-from audita.graph.nodes.cleaning_exec import cleaning_exec
-from audita.graph.nodes.profiling import profiling
-from audita.graph.nodes.insight_planning import insight_planning
-from audita.graph.nodes.chart_builder import chart_builder
-from audita.graph.nodes.self_check import self_check
-from audita.graph.nodes.assemble import assemble
 from audita.core.schemas import VerificationStatus
-
+from audita.graph.nodes.assemble import assemble
+from audita.graph.nodes.chart_builder import chart_builder
+from audita.graph.nodes.cleaning_exec import cleaning_exec
+from audita.graph.nodes.cleaning_plan import cleaning_plan
+from audita.graph.nodes.ingest import ingest
+from audita.graph.nodes.insight_planning import insight_planning
+from audita.graph.nodes.profiling import profiling
+from audita.graph.nodes.quality_audit import quality_audit
+from audita.graph.nodes.self_check import self_check
+from audita.graph.state import PipelineState
 
 # ---------------------------------------------------------------------------
 # Conditional edge functions
 # ---------------------------------------------------------------------------
+
 
 def _fan_out_charts(state: dict) -> list[Send]:
     """Fan-out: dispatch one chart_builder invocation per approved VizIntent."""
@@ -45,10 +45,13 @@ def _fan_out_charts(state: dict) -> list[Send]:
     sends = []
     for intent in intents:
         sends.append(
-            Send("chart_builder", {
-                "intent": intent,
-                "cleaned_csv_path": cleaned_csv_path,
-            })
+            Send(
+                "chart_builder",
+                {
+                    "intent": intent,
+                    "cleaned_csv_path": cleaned_csv_path,
+                },
+            )
         )
 
     return sends
@@ -61,7 +64,8 @@ def _check_retry_or_continue(
     completed_charts = state.get("completed_charts", [])
 
     retrying = [
-        c for c in completed_charts
+        c
+        for c in completed_charts
         if c.verification_status == VerificationStatus.RETRYING
     ]
 
@@ -81,10 +85,13 @@ def _fan_out_retries(state: dict) -> list[Send]:
     for chart in completed_charts:
         if chart.verification_status == VerificationStatus.RETRYING:
             sends.append(
-                Send("chart_builder", {
-                    "intent": chart.intent,
-                    "cleaned_csv_path": cleaned_csv_path,
-                })
+                Send(
+                    "chart_builder",
+                    {
+                        "intent": chart.intent,
+                        "cleaned_csv_path": cleaned_csv_path,
+                    },
+                )
             )
         else:
             non_retrying.append(chart)
@@ -95,6 +102,7 @@ def _fan_out_retries(state: dict) -> list[Send]:
 # ---------------------------------------------------------------------------
 # Graph construction
 # ---------------------------------------------------------------------------
+
 
 def build_graph(with_checkpointer: bool = True) -> Any:
     """Build and compile the AUDITA LangGraph pipeline.

@@ -54,6 +54,7 @@ def _get_client() -> anthropic.Anthropic:
 # Pydantic model → Anthropic tool schema conversion
 # ---------------------------------------------------------------------------
 
+
 def _pydantic_to_tool_schema(
     model_class: type[BaseModel],
     tool_name: str,
@@ -104,6 +105,7 @@ def _pydantic_list_to_tool_schema(
 # Core structured-output call
 # ---------------------------------------------------------------------------
 
+
 def call_structured(
     system_prompt: str,
     user_prompt: str,
@@ -141,7 +143,9 @@ def call_structured(
                 wait = RETRY_BACKOFF_BASE ** (attempt + 1)
                 time.sleep(wait)
             else:
-                raise RuntimeError(f"Anthropic API failed after {MAX_RETRIES} retries: {e}")
+                raise RuntimeError(
+                    f"Anthropic API failed after {MAX_RETRIES} retries: {e}"
+                ) from e
 
     raise RuntimeError("Unreachable")
 
@@ -149,6 +153,7 @@ def call_structured(
 # ---------------------------------------------------------------------------
 # High-level helpers used by nodes
 # ---------------------------------------------------------------------------
+
 
 def request_cleaning_plan(
     quality_audit: dict[str, Any],
@@ -244,8 +249,7 @@ def request_grounding_check(
     )
 
     user_prompt = (
-        "Verify these charts:\n\n"
-        f"```json\n{json.dumps(chart_summaries, indent=2)}\n```"
+        f"Verify these charts:\n\n```json\n{json.dumps(chart_summaries, indent=2)}\n```"
     )
 
     tool_schema = {

@@ -9,7 +9,6 @@ Normal reruns render from cache only — no re-invocation.
 import hashlib
 import os
 import tempfile
-from typing import Any
 
 import streamlit as st
 
@@ -58,9 +57,7 @@ st.markdown(
 # ---------------------------------------------------------------------------
 
 st.title("🔍 AUDITA")
-st.caption(
-    "Auditable, Self-Verifying Data Cleaning & Visualization Agent"
-)
+st.caption("Auditable, Self-Verifying Data Cleaning & Visualization Agent")
 
 # ---------------------------------------------------------------------------
 # Sidebar
@@ -130,7 +127,9 @@ if uploaded_file is not None:
     # Check for cached result
     if result_key in st.session_state:
         # Render from cache — no re-invocation
-        st.success("✅ Results loaded from cache. Upload a different file or click re-run below.")
+        st.success(
+            "✅ Results loaded from cache. Upload a different file or click re-run below."
+        )
         render_dashboard(st.session_state[result_key])
 
         # Re-run buttons
@@ -247,7 +246,7 @@ if uploaded_file is not None:
                     initial_state,
                     config=thread_config,
                 ):
-                    for node_name, node_output in event.items():
+                    for node_name in event:
                         with progress.container():
                             stage_progress(node_name)
 

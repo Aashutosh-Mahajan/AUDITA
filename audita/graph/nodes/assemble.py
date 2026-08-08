@@ -10,9 +10,9 @@ from typing import Any
 
 from audita.core.audit_log import log_code_action
 from audita.core.schemas import (
+    AuditLogEntry,
     ChartResult,
     CleaningDiffEntry,
-    AuditLogEntry,
     VerificationStatus,
 )
 
@@ -28,16 +28,18 @@ def _group_charts_by_category(
         if category not in groups:
             groups[category] = []
 
-        groups[category].append({
-            "chart_type": chart.intent.chart_type.value,
-            "columns": chart.intent.columns,
-            "rationale": chart.intent.rationale,
-            "priority_score": chart.intent.priority_score,
-            "figure_json": chart.figure_json,
-            "verification_status": chart.verification_status.value,
-            "verification_notes": chart.verification_notes,
-            "error": chart.error,
-        })
+        groups[category].append(
+            {
+                "chart_type": chart.intent.chart_type.value,
+                "columns": chart.intent.columns,
+                "rationale": chart.intent.rationale,
+                "priority_score": chart.intent.priority_score,
+                "figure_json": chart.figure_json,
+                "verification_status": chart.verification_status.value,
+                "verification_notes": chart.verification_notes,
+                "error": chart.error,
+            }
+        )
 
     return groups
 
@@ -102,15 +104,18 @@ def assemble(state: dict) -> dict:
 
     # Summary stats
     verified_count = sum(
-        1 for c in completed_charts
+        1
+        for c in completed_charts
         if c.verification_status == VerificationStatus.VERIFIED
     )
     flagged_count = sum(
-        1 for c in completed_charts
+        1
+        for c in completed_charts
         if c.verification_status == VerificationStatus.FLAGGED
     )
     failed_count = sum(
-        1 for c in completed_charts
+        1
+        for c in completed_charts
         if c.verification_status == VerificationStatus.FAILED
     )
 

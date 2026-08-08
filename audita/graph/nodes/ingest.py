@@ -6,14 +6,12 @@ produces a raw profile dict.
 import csv
 import os
 import tempfile
-from io import StringIO
 from typing import Any
 
 import chardet
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
-from audita.core.schemas import AuditLogEntry
 
 
 def _detect_encoding(file_path: str) -> str:
@@ -27,7 +25,7 @@ def _detect_encoding(file_path: str) -> str:
 
 def _detect_delimiter(file_path: str, encoding: str) -> str:
     """Use csv.Sniffer to detect the delimiter; fall back to comma."""
-    with open(file_path, "r", encoding=encoding, errors="replace") as f:
+    with open(file_path, encoding=encoding, errors="replace") as f:
         sample = f.read(8_192)
     try:
         dialect = csv.Sniffer().sniff(sample)
@@ -42,10 +40,7 @@ def _build_raw_profile(df: pd.DataFrame, file_path: str) -> dict[str, Any]:
         "n_rows": len(df),
         "n_cols": len(df.columns),
         "file_size_bytes": os.path.getsize(file_path),
-        "columns": [
-            {"name": col, "dtype": str(df[col].dtype)}
-            for col in df.columns
-        ],
+        "columns": [{"name": col, "dtype": str(df[col].dtype)} for col in df.columns],
     }
 
 

@@ -17,12 +17,11 @@ import pandas as pd
 from audita.core.audit_log import log_code_action, log_llm_action
 from audita.core.llm_client import request_grounding_check
 from audita.core.schemas import (
+    AuditLogEntry,
     ChartResult,
     ChartType,
     VerificationStatus,
-    AuditLogEntry,
 )
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -34,6 +33,7 @@ MAX_CHART_RETRIES = 2
 # ---------------------------------------------------------------------------
 # Code-level recomputation checks
 # ---------------------------------------------------------------------------
+
 
 def _extract_figure_data(chart: ChartResult) -> dict[str, Any] | None:
     """Parse the Plotly figure JSON and extract key data for verification."""
@@ -89,9 +89,7 @@ def _check_scatter_accuracy(
     return True, "Scatter plot data count verified"
 
 
-def _code_level_check(
-    df: pd.DataFrame, chart: ChartResult
-) -> tuple[bool, str]:
+def _code_level_check(df: pd.DataFrame, chart: ChartResult) -> tuple[bool, str]:
     """Run code-level recomputation checks appropriate to the chart type."""
     fig_data = _extract_figure_data(chart)
     if fig_data is None:
@@ -115,6 +113,7 @@ def _code_level_check(
 # LLM grounding check
 # ---------------------------------------------------------------------------
 
+
 def _build_chart_summary(chart: ChartResult, fig_data: dict | None) -> dict[str, Any]:
     """Build a compact textual summary for the LLM grounding check."""
     summary: dict[str, Any] = {
@@ -127,8 +126,12 @@ def _build_chart_summary(chart: ChartResult, fig_data: dict | None) -> dict[str,
     if fig_data:
         layout = fig_data.get("layout", {})
         summary["title"] = layout.get("title", {}).get("text", "")
-        summary["x_axis_label"] = layout.get("xaxis", {}).get("title", {}).get("text", "")
-        summary["y_axis_label"] = layout.get("yaxis", {}).get("title", {}).get("text", "")
+        summary["x_axis_label"] = (
+            layout.get("xaxis", {}).get("title", {}).get("text", "")
+        )
+        summary["y_axis_label"] = (
+            layout.get("yaxis", {}).get("title", {}).get("text", "")
+        )
 
         # Include a few data points (not the full dataset)
         traces = fig_data.get("data", [])
@@ -144,6 +147,7 @@ def _build_chart_summary(chart: ChartResult, fig_data: dict | None) -> dict[str,
 # ---------------------------------------------------------------------------
 # Node
 # ---------------------------------------------------------------------------
+
 
 def self_check(state: dict) -> dict:
     """LangGraph node: verify all completed charts.
@@ -174,16 +178,20 @@ def self_check(state: dict) -> dict:
 
         if not passed:
             if chart.retry_count < MAX_CHART_RETRIES:
-                updated_chart = chart.model_copy(update={
-                    "verification_status": VerificationStatus.RETRYING,
-                    "verification_notes": f"Code check failed: {notes}",
-                    "retry_count": chart.retry_count + 1,
-                })
+                updated_chart = chart.model_copy(
+                    update={
+                        "verification_status": VerificationStatus.RETRYING,
+                        "verification_notes": f"Code check failed: {notes}",
+                        "retry_count": chart.retry_count + 1,
+                    }
+                )
             else:
-                updated_chart = chart.model_copy(update={
-                    "verification_status": VerificationStatus.FLAGGED,
-                    "verification_notes": f"Code check failed after {MAX_CHART_RETRIES} retries: {notes}",
-                })
+                updated_chart = chart.model_copy(
+                    update={
+                        "verification_status": VerificationStatus.FLAGGED,
+                        "verification_notes": f"Code check failed after {MAX_CHART_RETRIES} retries: {notes}",
+                    }
+                )
 
             updated_charts.append(updated_chart)
             audit_entries.append(
@@ -217,15 +225,19 @@ def self_check(state: dict) -> dict:
                 for _ in summaries
             ]
 
-        for (_, chart, _), verdict in zip(charts_needing_grounding, verdicts):
+        for (_, chart, _), verdict in zip(
+            charts_needing_grounding, verdicts, strict=False
+        ):
             grounded = verdict.get("grounded", True)
             notes = verdict.get("notes", "")
 
             if grounded:
-                updated_chart = chart.model_copy(update={
-                    "verification_status": VerificationStatus.VERIFIED,
-                    "verification_notes": notes,
-                })
+                updated_chart = chart.model_copy(
+                    update={
+                        "verification_status": VerificationStatus.VERIFIED,
+                        "verification_notes": notes,
+                    }
+                )
                 audit_entries.append(
                     log_llm_action(
                         stage="self_check",
@@ -239,16 +251,20 @@ def self_check(state: dict) -> dict:
                 )
             else:
                 if chart.retry_count < MAX_CHART_RETRIES:
-                    updated_chart = chart.model_copy(update={
-                        "verification_status": VerificationStatus.RETRYING,
-                        "verification_notes": f"Grounding check failed: {notes}",
-                        "retry_count": chart.retry_count + 1,
-                    })
+                    updated_chart = chart.model_copy(
+                        update={
+                            "verification_status": VerificationStatus.RETRYING,
+                            "verification_notes": f"Grounding check failed: {notes}",
+                            "retry_count": chart.retry_count + 1,
+                        }
+                    )
                 else:
-                    updated_chart = chart.model_copy(update={
-                        "verification_status": VerificationStatus.FLAGGED,
-                        "verification_notes": f"Grounding failed after {MAX_CHART_RETRIES} retries: {notes}",
-                    })
+                    updated_chart = chart.model_copy(
+                        update={
+                            "verification_status": VerificationStatus.FLAGGED,
+                            "verification_notes": f"Grounding failed after {MAX_CHART_RETRIES} retries: {notes}",
+                        }
+                    )
 
                 audit_entries.append(
                     log_llm_action(

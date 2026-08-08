@@ -7,27 +7,33 @@ import pytest
 from pydantic import ValidationError
 
 from audita.core.schemas import (
-    CleaningActionType,
-    CleaningAction,
-    CleaningDiffEntry,
-    ChartType,
-    VizIntent,
-    VerificationStatus,
-    ChartResult,
     AuditLogEntry,
+    ChartResult,
+    ChartType,
+    CleaningAction,
+    CleaningActionType,
+    CleaningDiffEntry,
+    VerificationStatus,
+    VizIntent,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum membership tests
 # ---------------------------------------------------------------------------
 
+
 class TestCleaningActionTypeEnum:
     def test_all_members_present(self):
         expected = {
-            "impute_mean", "impute_median", "impute_mode",
-            "drop_rows", "drop_column", "standardize_categories",
-            "parse_dates", "cap_outliers", "no_action",
+            "impute_mean",
+            "impute_median",
+            "impute_mode",
+            "drop_rows",
+            "drop_column",
+            "standardize_categories",
+            "parse_dates",
+            "cap_outliers",
+            "no_action",
         }
         actual = {e.value for e in CleaningActionType}
         assert actual == expected
@@ -62,6 +68,7 @@ class TestVerificationStatusEnum:
 # ---------------------------------------------------------------------------
 # CleaningAction model tests
 # ---------------------------------------------------------------------------
+
 
 class TestCleaningAction:
     def test_valid_construction(self):
@@ -110,6 +117,7 @@ class TestCleaningAction:
 # CleaningDiffEntry model tests
 # ---------------------------------------------------------------------------
 
+
 class TestCleaningDiffEntry:
     def test_valid_construction(self):
         entry = CleaningDiffEntry(
@@ -136,6 +144,7 @@ class TestCleaningDiffEntry:
 # ---------------------------------------------------------------------------
 # VizIntent model tests
 # ---------------------------------------------------------------------------
+
 
 class TestVizIntent:
     def test_valid_construction(self):
@@ -215,6 +224,7 @@ class TestVizIntent:
 # ChartResult model tests
 # ---------------------------------------------------------------------------
 
+
 class TestChartResult:
     def test_valid_verified_chart(self):
         intent = VizIntent(
@@ -261,6 +271,7 @@ class TestChartResult:
 # ---------------------------------------------------------------------------
 # AuditLogEntry model tests
 # ---------------------------------------------------------------------------
+
 
 class TestAuditLogEntry:
     def test_valid_construction(self):

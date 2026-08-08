@@ -7,7 +7,6 @@ from typing import Any
 
 import streamlit as st
 
-
 # ---------------------------------------------------------------------------
 # Verification status badges
 # ---------------------------------------------------------------------------
@@ -46,7 +45,10 @@ def verification_badge(status: str, notes: str = "") -> None:
 # Metric cards
 # ---------------------------------------------------------------------------
 
-def metric_card(label: str, value: Any, delta: Any = None, delta_color: str = "normal") -> None:
+
+def metric_card(
+    label: str, value: Any, delta: Any = None, delta_color: str = "normal"
+) -> None:
     """Render a Streamlit metric with consistent styling."""
     st.metric(label=label, value=value, delta=delta, delta_color=delta_color)
 
@@ -54,7 +56,7 @@ def metric_card(label: str, value: Any, delta: Any = None, delta_color: str = "n
 def stats_row(stats: dict[str, Any]) -> None:
     """Render a row of metric cards from a stats dict."""
     cols = st.columns(len(stats))
-    for col, (label, value) in zip(cols, stats.items()):
+    for col, (label, value) in zip(cols, stats.items(), strict=False):
         with col:
             metric_card(label=label.replace("_", " ").title(), value=value)
 
@@ -62,6 +64,7 @@ def stats_row(stats: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Data quality comparison cards
 # ---------------------------------------------------------------------------
+
 
 def quality_comparison_card(
     col_name: str,
@@ -98,6 +101,7 @@ def quality_comparison_card(
 # Cleaning diff table
 # ---------------------------------------------------------------------------
 
+
 def cleaning_diff_table(diffs: list[dict[str, Any]]) -> None:
     """Render the cleaning diff table with action rationale."""
     if not diffs:
@@ -121,6 +125,7 @@ def cleaning_diff_table(diffs: list[dict[str, Any]]) -> None:
 # ---------------------------------------------------------------------------
 # Audit log
 # ---------------------------------------------------------------------------
+
 
 def audit_log_section(entries: list[dict[str, Any]]) -> None:
     """Render a collapsible audit log table."""
@@ -166,6 +171,7 @@ def stage_progress(stage: str) -> None:
 # ---------------------------------------------------------------------------
 # Cleaning plan approval widget
 # ---------------------------------------------------------------------------
+
 
 def cleaning_plan_approval(
     cleaning_plan: list[dict[str, Any]],

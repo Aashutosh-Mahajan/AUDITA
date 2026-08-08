@@ -9,12 +9,11 @@ with FAILED status rather than raising.
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
-from audita.core.chart_registry import render_chart, DtypeCompatibilityError
+from audita.core.chart_registry import DtypeCompatibilityError, render_chart
 from audita.core.schemas import (
-    VizIntent,
     ChartResult,
     VerificationStatus,
-    AuditLogEntry,
+    VizIntent,
 )
 
 

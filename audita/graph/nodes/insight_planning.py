@@ -6,23 +6,24 @@ and dtype compatibility against the clean profile and chart registry, then
 applies deterministic filtering (priority threshold + deduplication).
 """
 
-import json
 from typing import Any
 
+import pandas as pd
 from pydantic import ValidationError
 
-from audita.core.audit_log import log_llm_action, log_code_action
-from audita.core.chart_registry import validate_chart_compatibility, DtypeCompatibilityError
+from audita.core.audit_log import log_code_action, log_llm_action
+from audita.core.chart_registry import (
+    DtypeCompatibilityError,
+    validate_chart_compatibility,
+)
 from audita.core.llm_client import (
-    request_viz_intents,
     _pydantic_list_to_tool_schema,
+    request_viz_intents,
 )
 from audita.core.schemas import (
-    VizIntent,
     AuditLogEntry,
+    VizIntent,
 )
-
-import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -34,6 +35,7 @@ MIN_PRIORITY_SCORE = 2.5
 # ---------------------------------------------------------------------------
 # Validation & filtering
 # ---------------------------------------------------------------------------
+
 
 def _validate_intents(
     raw_intents: list[dict[str, Any]],
@@ -120,6 +122,7 @@ def _filter_and_deduplicate(intents: list[VizIntent]) -> list[VizIntent]:
 # ---------------------------------------------------------------------------
 # Node
 # ---------------------------------------------------------------------------
+
 
 def insight_planning(state: dict) -> dict:
     """LangGraph node: ask the LLM for visualization intents, validate and filter."""

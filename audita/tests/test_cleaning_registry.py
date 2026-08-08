@@ -5,55 +5,78 @@ against synthetic DataFrames with known values.
 
 import numpy as np
 import pandas as pd
-import pytest
 
+from audita.core.cleaning_registry import CLEANING_REGISTRY, execute_cleaning_action
 from audita.core.schemas import CleaningAction, CleaningActionType
-from audita.core.cleaning_registry import execute_cleaning_action, CLEANING_REGISTRY
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_numeric_df() -> pd.DataFrame:
     """Small DataFrame with known missing values and outliers."""
-    return pd.DataFrame({
-        "age": [25.0, 30.0, np.nan, 35.0, 40.0, np.nan, 28.0],
-        "salary": [50000, 60000, 70000, 80000, 500000, 55000, 65000],
-        "name": ["Alice", "Bob", None, "Diana", "Eve", "Frank", "Grace"],
-    })
+    return pd.DataFrame(
+        {
+            "age": [25.0, 30.0, np.nan, 35.0, 40.0, np.nan, 28.0],
+            "salary": [50000, 60000, 70000, 80000, 500000, 55000, 65000],
+            "name": ["Alice", "Bob", None, "Diana", "Eve", "Frank", "Grace"],
+        }
+    )
 
 
 def _make_category_df() -> pd.DataFrame:
     """DataFrame with messy categorical labels."""
-    return pd.DataFrame({
-        "status": ["Active", "active", " ACTIVE", "Inactive", "inactive", "Actve", "Inactive"],
-        "value": [1, 2, 3, 4, 5, 6, 7],
-    })
+    return pd.DataFrame(
+        {
+            "status": [
+                "Active",
+                "active",
+                " ACTIVE",
+                "Inactive",
+                "inactive",
+                "Actve",
+                "Inactive",
+            ],
+            "value": [1, 2, 3, 4, 5, 6, 7],
+        }
+    )
 
 
 def _make_date_df() -> pd.DataFrame:
     """DataFrame with string dates and some unparseable values."""
-    return pd.DataFrame({
-        "date_str": ["2024-01-01", "2024-02-15", "not-a-date", "2024-06-30", "2024-12-25"],
-        "value": [10, 20, 30, 40, 50],
-    })
+    return pd.DataFrame(
+        {
+            "date_str": [
+                "2024-01-01",
+                "2024-02-15",
+                "not-a-date",
+                "2024-06-30",
+                "2024-12-25",
+            ],
+            "value": [10, 20, 30, 40, 50],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # Registry completeness
 # ---------------------------------------------------------------------------
 
+
 class TestRegistryCompleteness:
     def test_all_action_types_registered(self):
         """Every CleaningActionType must have a handler in the registry."""
         for action_type in CleaningActionType:
-            assert action_type in CLEANING_REGISTRY, f"Missing handler for {action_type}"
+            assert action_type in CLEANING_REGISTRY, (
+                f"Missing handler for {action_type}"
+            )
 
 
 # ---------------------------------------------------------------------------
 # Imputation tests
 # ---------------------------------------------------------------------------
+
 
 class TestImputeMean:
     def test_fills_nan_with_mean(self):
@@ -123,6 +146,7 @@ class TestImputeMode:
 # Drop tests
 # ---------------------------------------------------------------------------
 
+
 class TestDropRows:
     def test_drops_rows_with_nan(self):
         df = _make_numeric_df()
@@ -163,6 +187,7 @@ class TestDropColumn:
 # Standardize categories tests
 # ---------------------------------------------------------------------------
 
+
 class TestStandardizeCategories:
     def test_lowercases_and_strips(self):
         df = _make_category_df()
@@ -194,6 +219,7 @@ class TestStandardizeCategories:
 # Parse dates tests
 # ---------------------------------------------------------------------------
 
+
 class TestParseDates:
     def test_parses_valid_dates(self):
         df = _make_date_df()
@@ -222,6 +248,7 @@ class TestParseDates:
 # ---------------------------------------------------------------------------
 # Cap outliers tests
 # ---------------------------------------------------------------------------
+
 
 class TestCapOutliers:
     def test_iqr_capping(self):
@@ -261,6 +288,7 @@ class TestCapOutliers:
 # ---------------------------------------------------------------------------
 # No-action test
 # ---------------------------------------------------------------------------
+
 
 class TestNoAction:
     def test_returns_copy_unchanged(self):

@@ -1,0 +1,131 @@
+name: AUDITA CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------
+  # Lint — fast feedback on code quality
+  # -------------------------------------------------------------------
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linting tools
+        run: pip install ruff
+
+      - name: Run Ruff linter
+        run: ruff check audita/
+
+      - name: Run Ruff format check
+        run: ruff format --check audita/
+
+  # -------------------------------------------------------------------
+  # Test — run the full test suite
+  # -------------------------------------------------------------------
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: |
+          pip install pytest-cov
+          python -m pytest audita/tests/ -v --tb=short --cov=audita --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 30
+
+  # -------------------------------------------------------------------
+  # Import check — verify all modules import cleanly
+  # -------------------------------------------------------------------
+  import-check:
+    name: Import Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify core module imports
+        run: |
+          python -c "from audita.core.schemas import CleaningActionType, ChartType, VizIntent, CleaningAction, ChartResult, AuditLogEntry"
+          python -c "from audita.core.cleaning_registry import CLEANING_REGISTRY, execute_cleaning_action"
+          python -c "from audita.core.chart_registry import CHART_REGISTRY, render_chart, validate_chart_compatibility"
+          python -c "from audita.core.audit_log import log_llm_action, log_code_action"
+          python -c "from audita.graph.state import PipelineState"
+          echo "All core imports verified ✅"
+
+  # -------------------------------------------------------------------
+  # Security — check for known vulnerabilities
+  # -------------------------------------------------------------------
+  security:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit --strict --desc || true

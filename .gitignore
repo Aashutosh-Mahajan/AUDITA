@@ -29,6 +29,15 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
+# Testing
+.pytest_cache/
+htmlcov/
+coverage.xml
+.coverage
+
+# Linting
+.ruff_cache/
+
 # Temp files
 *.tmp
 *.bak

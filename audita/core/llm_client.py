@@ -136,16 +136,51 @@ def call_structured(
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.chat.completions.create(
-                model=resolved_model,
-                max_tokens=max_tokens,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                tools=[openai_tool],
-                tool_choice={"type": "function", "function": {"name": tool_name}},
-            )
+            try:
+                response = client.chat.completions.create(
+                    model=resolved_model,
+                    max_completion_tokens=max_tokens,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    tools=[openai_tool],
+                    tool_choice={"type": "function", "function": {"name": tool_name}},
+                )
+            except openai.BadRequestError as bad_req:
+                err_msg = str(bad_req)
+                # Fallback if model doesn't accept max_completion_tokens
+                if "max_completion_tokens" in err_msg:
+                    response = client.chat.completions.create(
+                        model=resolved_model,
+                        max_tokens=max_tokens,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        tools=[openai_tool],
+                        tool_choice={
+                            "type": "function",
+                            "function": {"name": tool_name},
+                        },
+                    )
+                # Fallback if model doesn't support 'system' role (e.g. o1/o3 reasoning models)
+                elif "system" in err_msg and "developer" in err_msg:
+                    response = client.chat.completions.create(
+                        model=resolved_model,
+                        max_completion_tokens=max_tokens,
+                        messages=[
+                            {"role": "developer", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        tools=[openai_tool],
+                        tool_choice={
+                            "type": "function",
+                            "function": {"name": tool_name},
+                        },
+                    )
+                else:
+                    raise
 
             message = response.choices[0].message
             if message.tool_calls:

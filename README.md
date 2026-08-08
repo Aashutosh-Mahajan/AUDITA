@@ -149,6 +149,10 @@ cp .env.example .env
 ### Run the App
 
 ```bash
+# Run via Python module (recommended on Windows / all platforms)
+python -m streamlit run audita/app.py
+
+# Or directly if streamlit is in your PATH
 streamlit run audita/app.py
 ```
 

@@ -16,7 +16,7 @@
     <img src="https://github.com/Aashutosh-Mahajan/AUDITA/actions/workflows/ci.yml/badge.svg" alt="CI">
     <img src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue" alt="Python">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-    <img src="https://img.shields.io/badge/LLM-Claude%20(Anthropic)-blueviolet" alt="LLM">
+    <img src="https://img.shields.io/badge/LLM-OpenAI%20(GPT--5.4--mini)-blueviolet" alt="LLM">
   </p>
 </p>
 
@@ -122,7 +122,7 @@ AUDITA is a data cleaning and visualization agent where the AI **never writes or
 ### Prerequisites
 
 - **Python 3.11+**
-- **Anthropic API key** ([get one here](https://console.anthropic.com/))
+- **OpenAI API key** ([get one here](https://platform.openai.com/api-keys))
 
 ### Installation
 
@@ -139,9 +139,11 @@ source .venv/bin/activate        # Linux/macOS
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure your API key
+# Configure your API key and model
 cp .env.example .env
-# Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
+# Edit .env and set:
+# OPENAI_API_KEY=sk-...
+# OPENAI_MODEL=GPT-5.4-mini
 ```
 
 ### Run the App
@@ -258,7 +260,7 @@ AUDITA/
 │       ├── test_schemas.py         # Schema validation tests
 │       ├── test_cleaning_registry.py # Cleaning handler tests
 │       └── test_chart_registry.py  # Chart renderer tests
-├── .env.example                    # ANTHROPIC_API_KEY=
+├── .env.example                    # OPENAI_API_KEY=, OPENAI_MODEL=GPT-5.4-mini
 ├── .gitignore
 ├── requirements.txt
 ├── AUDITA_BUILD_SPEC.md            # Full build specification
@@ -321,7 +323,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 🙏 Acknowledgements
 
-- [Anthropic Claude](https://www.anthropic.com/) — structured output for cleaning/visualization proposals
+- [OpenAI](https://openai.com/) — structured tool-calling with models like GPT-5.4-mini for proposals
 - [LangGraph](https://github.com/langchain-ai/langgraph) — pipeline orchestration with fan-out/fan-in
 - [Plotly](https://plotly.com/) — interactive charting
 - [Streamlit](https://streamlit.io/) — dashboard UI

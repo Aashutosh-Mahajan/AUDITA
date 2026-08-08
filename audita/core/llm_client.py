@@ -1,5 +1,5 @@
 """
-Centralized Anthropic API wrapper with structured output support.
+Centralized OpenAI API wrapper with structured output support.
 
 All LLM calls flow through this module — cleaning plan, insight planning,
 and grounding checks. Retry/backoff logic is centralized here so nodes
@@ -11,8 +11,9 @@ import os
 import time
 from typing import Any, TypeVar
 
-import anthropic
+import openai
 from dotenv import load_dotenv
+from openai import OpenAI
 from pydantic import BaseModel
 
 load_dotenv()
@@ -21,7 +22,7 @@ load_dotenv()
 # Configuration
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+DEFAULT_MODEL = "GPT-5.4-mini"
 DEFAULT_MAX_TOKENS = 4096
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0  # seconds
@@ -33,25 +34,30 @@ T = TypeVar("T", bound=BaseModel)
 # Client singleton
 # ---------------------------------------------------------------------------
 
-_client: anthropic.Anthropic | None = None
+_client: OpenAI | None = None
 
 
-def _get_client() -> anthropic.Anthropic:
-    """Lazy-initialise and return the Anthropic client singleton."""
+def _get_model_name() -> str:
+    """Return the configured model name from environment or default."""
+    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+
+
+def _get_client() -> OpenAI:
+    """Lazy-initialise and return the OpenAI client singleton."""
     global _client
     if _client is None:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise RuntimeError(
-                "ANTHROPIC_API_KEY is not set. "
-                "Copy .env.example to .env and add your key."
+                "OPENAI_API_KEY is not set. "
+                "Copy .env.example to .env and add your OpenAI API key."
             )
-        _client = anthropic.Anthropic(api_key=api_key)
+        _client = OpenAI(api_key=api_key)
     return _client
 
 
 # ---------------------------------------------------------------------------
-# Pydantic model → Anthropic tool schema conversion
+# Pydantic model → OpenAI tool schema conversion
 # ---------------------------------------------------------------------------
 
 
@@ -60,9 +66,8 @@ def _pydantic_to_tool_schema(
     tool_name: str,
     description: str,
 ) -> dict[str, Any]:
-    """Convert a Pydantic model class to an Anthropic tool definition."""
+    """Convert a Pydantic model class to an OpenAI tool definition."""
     schema = model_class.model_json_schema()
-    # Remove Pydantic-specific keys that Anthropic doesn't need
     schema.pop("title", None)
 
     return {
@@ -79,7 +84,6 @@ def _pydantic_list_to_tool_schema(
 ) -> dict[str, Any]:
     """Create a tool schema that expects a list of Pydantic model instances."""
     item_schema = model_class.model_json_schema()
-    # Inline $defs if present (Anthropic tools don't support $ref)
     defs = item_schema.pop("$defs", {})
 
     return {
@@ -95,7 +99,6 @@ def _pydantic_list_to_tool_schema(
                 }
             },
             "required": ["items"],
-            # Embed $defs at the top level for sub-schema resolution
             **({"$defs": defs} if defs else {}),
         },
     }
@@ -110,41 +113,55 @@ def call_structured(
     system_prompt: str,
     user_prompt: str,
     tool_schema: dict[str, Any],
-    model: str = DEFAULT_MODEL,
+    model: str | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> dict[str, Any]:
-    """Make an Anthropic API call expecting structured tool-use output.
+    """Make an OpenAI API call expecting structured tool-use output.
 
     Returns the parsed tool input dict (validated JSON, not yet Pydantic).
     Retries on transient API errors with exponential backoff.
     """
     client = _get_client()
+    resolved_model = model or _get_model_name()
+
+    tool_name = tool_schema["name"]
+    openai_tool = {
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "description": tool_schema.get("description", ""),
+            "parameters": tool_schema["input_schema"],
+        },
+    }
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.messages.create(
-                model=model,
+            response = client.chat.completions.create(
+                model=resolved_model,
                 max_tokens=max_tokens,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-                tools=[tool_schema],
-                tool_choice={"type": "tool", "name": tool_schema["name"]},
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                tools=[openai_tool],
+                tool_choice={"type": "function", "function": {"name": tool_name}},
             )
 
-            # Extract tool use block
-            for block in response.content:
-                if block.type == "tool_use":
-                    return block.input
+            message = response.choices[0].message
+            if message.tool_calls:
+                for tool_call in message.tool_calls:
+                    if tool_call.function.name == tool_name:
+                        return json.loads(tool_call.function.arguments)
 
-            raise ValueError("No tool_use block in LLM response")
+            raise ValueError("No matching tool_call in OpenAI response")
 
-        except (anthropic.RateLimitError, anthropic.APIConnectionError) as e:
+        except (openai.RateLimitError, openai.APIConnectionError) as e:
             if attempt < MAX_RETRIES - 1:
                 wait = RETRY_BACKOFF_BASE ** (attempt + 1)
                 time.sleep(wait)
             else:
                 raise RuntimeError(
-                    f"Anthropic API failed after {MAX_RETRIES} retries: {e}"
+                    f"OpenAI API failed after {MAX_RETRIES} retries: {e}"
                 ) from e
 
     raise RuntimeError("Unreachable")

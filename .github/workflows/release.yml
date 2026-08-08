@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "AUDITA ${{ github.ref_name }}"
+          generate_release_notes: true
+          draft: false
+          prerelease: false

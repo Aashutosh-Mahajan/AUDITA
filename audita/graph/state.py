@@ -1,9 +1,15 @@
 """
 LangGraph pipeline state definition.
 
-``completed_charts`` and ``audit_log`` use ``operator.add`` because they are
-written to concurrently by parallel ``Send()``-dispatched nodes — this is
-required for LangGraph's fan-in to work correctly.
+``audit_log`` uses ``operator.add`` because it is written to concurrently by
+parallel ``Send()``-dispatched nodes — this is required for LangGraph's fan-in
+to work correctly.
+
+``completed_charts`` needs the same concurrent fan-in but must NOT plainly
+append: ``self_check`` rewrites the charts it has verified, and a plain
+``operator.add`` would leave both the pre- and post-verification copies in the
+list. ``merge_charts`` therefore appends new charts but replaces existing ones
+in place, keyed by their intent.
 """
 
 import operator
@@ -18,11 +24,45 @@ from audita.core.schemas import (
 )
 
 
+def _chart_key(chart: ChartResult) -> tuple:
+    """Stable identity for a chart — its intent, which survives re-verification."""
+    return (
+        chart.intent.chart_type.value,
+        tuple(chart.intent.columns),
+        chart.intent.category,
+    )
+
+
+def merge_charts(
+    existing: list[ChartResult] | None,
+    incoming: list[ChartResult] | None,
+) -> list[ChartResult]:
+    """Reducer for ``completed_charts``: append new charts, replace known ones.
+
+    Preserves the order in which charts first appeared so the dashboard stays
+    stable across a verification pass or a retry.
+    """
+    merged: list[ChartResult] = list(existing or [])
+    index = {_chart_key(c): i for i, c in enumerate(merged)}
+
+    for chart in incoming or []:
+        key = _chart_key(chart)
+        if key in index:
+            merged[index[key]] = chart
+        else:
+            index[key] = len(merged)
+            merged.append(chart)
+
+    return merged
+
+
 class PipelineState(TypedDict):
     """Full state flowing through the AUDITA LangGraph pipeline."""
 
     # Ingest stage
-    csv_path: str
+    source_path: str  # user-supplied CSV or Excel file
+    sheet_name: str  # Excel sheet to read; ignored for CSV input
+    csv_path: str  # normalised CSV written by ingest, read by every later node
     raw_profile: dict
 
     # Quality audit stage
@@ -38,10 +78,15 @@ class PipelineState(TypedDict):
 
     # Visualization stages
     proposed_visualizations: list[VizIntent]
-    completed_charts: Annotated[list[ChartResult], operator.add]  # fan-in accumulator
+    completed_charts: Annotated[
+        list[ChartResult], merge_charts
+    ]  # fan-in, dedup by intent
 
     # Audit trail — concurrent writes from parallel nodes
     audit_log: Annotated[list[AuditLogEntry], operator.add]
+
+    # Final assembled dashboard payload consumed by ui/sections.py
+    dashboard: dict
 
     # Human-in-the-loop gate flag (Section 6)
     human_approved_cleaning: bool

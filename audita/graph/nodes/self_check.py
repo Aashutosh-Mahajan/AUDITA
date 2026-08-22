@@ -9,12 +9,15 @@ After max retries, charts are FLAGGED (not FAILED) — they still render
 but with a visible warning.
 """
 
+import base64
 import json
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from audita.core.audit_log import log_code_action, log_llm_action
+from audita.core.frame_io import read_frame
 from audita.core.llm_client import request_grounding_check
 from audita.core.schemas import (
     AuditLogEntry,
@@ -33,6 +36,31 @@ MAX_CHART_RETRIES = 2
 # ---------------------------------------------------------------------------
 # Code-level recomputation checks
 # ---------------------------------------------------------------------------
+
+
+def _trace_array(value: Any) -> list[Any]:
+    """Return a trace field (``x``/``y``/``values``) as a plain Python list.
+
+    Plotly >= 6 serialises numeric arrays as
+    ``{"dtype": "f8", "bdata": "<base64>"}`` rather than a JSON list, so any
+    code that slices or len()s the raw field silently misreads it (or raises).
+    Decode that form here; pass lists through untouched.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict) and "bdata" in value:
+        try:
+            raw = base64.b64decode(value["bdata"])
+            arr = np.frombuffer(raw, dtype=np.dtype(value.get("dtype", "f8")))
+            shape = value.get("shape")
+            if shape:
+                arr = arr.reshape([int(d) for d in str(shape).split(",")])
+            return arr.tolist()
+        except (ValueError, TypeError):
+            return []
+    return []
 
 
 def _extract_figure_data(chart: ChartResult) -> dict[str, Any] | None:
@@ -77,7 +105,7 @@ def _check_scatter_accuracy(
         return False, "No trace data in scatter plot"
 
     trace = traces[0]
-    x_data = trace.get("x", [])
+    x_data = _trace_array(trace.get("x"))
     expected_count = len(df.dropna(subset=chart.intent.columns))
 
     if abs(len(x_data) - expected_count) > 1:
@@ -137,9 +165,10 @@ def _build_chart_summary(chart: ChartResult, fig_data: dict | None) -> dict[str,
         traces = fig_data.get("data", [])
         if traces:
             trace = traces[0]
-            x = trace.get("x", [])[:5]
-            y = trace.get("y", [])[:5]
-            summary["sample_data"] = {"x": x, "y": y}
+            summary["sample_data"] = {
+                "x": _trace_array(trace.get("x"))[:5],
+                "y": _trace_array(trace.get("y"))[:5],
+            }
 
     return summary
 
@@ -161,7 +190,7 @@ def self_check(state: dict) -> dict:
     completed_charts: list[ChartResult] = state["completed_charts"]
     cleaned_csv_path: str = state["cleaned_csv_path"]
 
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     audit_entries: list[AuditLogEntry] = []
     updated_charts: list[ChartResult] = []

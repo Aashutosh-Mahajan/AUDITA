@@ -8,7 +8,6 @@ applies deterministic filtering (priority threshold + deduplication).
 
 from typing import Any
 
-import pandas as pd
 from pydantic import ValidationError
 
 from audita.core.audit_log import log_code_action, log_llm_action
@@ -16,6 +15,7 @@ from audita.core.chart_registry import (
     DtypeCompatibilityError,
     validate_chart_compatibility,
 )
+from audita.core.frame_io import read_frame
 from audita.core.llm_client import (
     _pydantic_list_to_tool_schema,
     request_viz_intents,
@@ -44,7 +44,7 @@ def _validate_intents(
 ) -> tuple[list[VizIntent], list[AuditLogEntry]]:
     """Validate LLM-proposed intents against real columns and dtype rules."""
     valid_columns = list(clean_profile.keys())
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     valid: list[VizIntent] = []
     rejections: list[AuditLogEntry] = []
@@ -103,15 +103,20 @@ def _validate_intents(
 def _filter_and_deduplicate(intents: list[VizIntent]) -> list[VizIntent]:
     """Apply deterministic filtering:
     1. Drop intents with priority_score < MIN_PRIORITY_SCORE
-    2. Deduplicate same column set + category (keep highest score)
+    2. Deduplicate genuinely identical intents (keep highest score)
+
+    The dedupe key includes ``chart_type``: a histogram and a box plot of the
+    same column are different views of that column, and collapsing them
+    contradicts the diversity the planning prompt asks for. Only a repeat of
+    the same chart type on the same columns is a true duplicate.
     """
     # Filter by priority
     filtered = [i for i in intents if i.priority_score >= MIN_PRIORITY_SCORE]
 
-    # Deduplicate: key = (frozenset(columns), category)
-    best: dict[tuple[frozenset[str], str], VizIntent] = {}
+    # Deduplicate: key = (chart_type, frozenset(columns), category)
+    best: dict[tuple[str, frozenset[str], str], VizIntent] = {}
     for intent in filtered:
-        key = (frozenset(intent.columns), intent.category)
+        key = (intent.chart_type.value, frozenset(intent.columns), intent.category)
         if key not in best or intent.priority_score > best[key].priority_score:
             best[key] = intent
 

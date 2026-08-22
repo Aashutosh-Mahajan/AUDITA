@@ -6,10 +6,9 @@ chart registry. No LLM involvement. On failure, returns a ChartResult
 with FAILED status rather than raising.
 """
 
-import pandas as pd
-
 from audita.core.audit_log import log_code_action
-from audita.core.chart_registry import DtypeCompatibilityError, render_chart
+from audita.core.chart_registry import render_chart
+from audita.core.frame_io import read_frame
 from audita.core.schemas import (
     ChartResult,
     VerificationStatus,
@@ -26,8 +25,11 @@ def chart_builder(state: dict) -> dict:
     """
     intent: VizIntent = state["intent"]
     cleaned_csv_path: str = state["cleaned_csv_path"]
+    # Carried over on a retry dispatch so the attempt counter keeps climbing;
+    # without it a retried chart resets to 0 and the retry loop never ends.
+    retry_count: int = state.get("retry_count", 0)
 
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     try:
         fig = render_chart(df, intent)
@@ -38,6 +40,7 @@ def chart_builder(state: dict) -> dict:
             figure_json=figure_json,
             verification_status=VerificationStatus.VERIFIED,  # tentative until self_check
             verification_notes="",
+            retry_count=retry_count,
         )
 
         audit_entry = log_code_action(
@@ -50,12 +53,13 @@ def chart_builder(state: dict) -> dict:
             },
         )
 
-    except (DtypeCompatibilityError, Exception) as e:
+    except Exception as e:  # DtypeCompatibilityError included
         result = ChartResult(
             intent=intent,
             figure_json=None,
             verification_status=VerificationStatus.FAILED,
             error=str(e),
+            retry_count=retry_count,
         )
 
         audit_entry = log_code_action(

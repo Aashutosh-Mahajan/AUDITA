@@ -22,7 +22,8 @@ load_dotenv()
 # Configuration
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODEL = "GPT-5.4-mini"
+# OpenAI model ids are case-sensitive — "GPT-5.4-mini" is not a valid id.
+DEFAULT_MODEL = "gpt-5.4-mini"
 DEFAULT_MAX_TOKENS = 4096
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0  # seconds
@@ -39,7 +40,7 @@ _client: OpenAI | None = None
 
 def _get_model_name() -> str:
     """Return the configured model name from environment or default."""
-    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+    return os.getenv("OPENAI_MODEL") or DEFAULT_MODEL
 
 
 def _get_client() -> OpenAI:

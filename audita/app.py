@@ -152,6 +152,8 @@ if uploaded_file is not None:
                 st.caption(f"Sheet: **{selected_sheet}**")
 
     file_hash = _file_hash(uploaded_file, selected_sheet)
+    run_key = f"run_{file_hash}"
+    run_index = st.session_state.setdefault(run_key, 0)
     result_key = f"result_{file_hash}"
     state_key = f"state_{file_hash}"
     stage_key = f"stage_{file_hash}"
@@ -164,20 +166,14 @@ if uploaded_file is not None:
         )
         render_dashboard(st.session_state[result_key])
 
-        # Re-run buttons
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 Re-run Cleaning Plan", key="rerun_clean"):
-                del st.session_state[result_key]
-                if state_key in st.session_state:
-                    del st.session_state[state_key]
-                st.rerun()
-        with col2:
-            if st.button("🔄 Re-run Insight Planning", key="rerun_insight"):
-                del st.session_state[result_key]
-                if state_key in st.session_state:
-                    del st.session_state[state_key]
-                st.rerun()
+        # Re-run: clear every cached key for this file AND advance the run
+        # counter. The counter feeds the thread_id, so the pipeline starts on
+        # a fresh checkpoint instead of resuming one that already finished.
+        if st.button("🔄 Re-run Analysis", key=f"rerun_{file_hash}"):
+            for key in (result_key, state_key, stage_key):
+                st.session_state.pop(key, None)
+            st.session_state[run_key] = run_index + 1
+            st.rerun()
 
     else:
         # No cached result — run the pipeline
@@ -187,10 +183,16 @@ if uploaded_file is not None:
             st.session_state["graph_instance"] = build_graph(with_checkpointer=True)
 
         graph = st.session_state["graph_instance"]
-        thread_config = {"configurable": {"thread_id": file_hash}}
+        thread_config = {
+            "configurable": {"thread_id": f"{file_hash}-{run_index}"}
+        }
 
-        # Check if we're resuming after human approval
+        # Check if we're resuming after human approval. Anything other than an
+        # explicit "awaiting_approval" means we have no live checkpoint to
+        # resume, so start the pipeline from the top.
         current_stage = st.session_state.get(stage_key, "start")
+        if current_stage not in ("start", "awaiting_approval"):
+            current_stage = "start"
 
         if current_stage == "awaiting_approval":
             # Show the cleaning plan for approval
@@ -267,7 +269,7 @@ if uploaded_file is not None:
                     st.error(f"Pipeline error: {e}")
                     st.exception(e)
 
-        elif current_stage == "start":
+        else:
             # Fresh run — start the pipeline
             progress = st.empty()
 

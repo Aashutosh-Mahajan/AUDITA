@@ -14,6 +14,7 @@ import streamlit as st
 
 from audita.graph.build_graph import build_graph
 from audita.graph.nodes.assemble import assemble  # fallback if the graph errored
+from audita.graph.nodes.ingest import is_excel_path, list_sheet_names
 from audita.ui.components import (
     cleaning_plan_approval,
     stage_progress,
@@ -66,9 +67,9 @@ st.caption("Auditable, Self-Verifying Data Cleaning & Visualization Agent")
 with st.sidebar:
     st.markdown("## Upload Data")
     uploaded_file = st.file_uploader(
-        "Choose a CSV file",
-        type=["csv"],
-        help="Upload a CSV file to analyze, clean, and visualize.",
+        "Choose a CSV or Excel file",
+        type=["csv", "tsv", "xlsx", "xlsm", "xls"],
+        help="Upload a CSV or Excel workbook to analyze, clean, and visualize.",
     )
 
     st.markdown("---")
@@ -84,19 +85,27 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 
 
-def _file_hash(uploaded_file) -> str:
-    """Compute a hash of the uploaded file for caching."""
-    content = uploaded_file.getvalue()
-    return hashlib.sha256(content).hexdigest()[:16]
+def _file_hash(uploaded_file, sheet_name: str | None = None) -> str:
+    """Compute a cache key from the uploaded file's bytes and chosen sheet."""
+    digest = hashlib.sha256(uploaded_file.getvalue())
+    if sheet_name:
+        digest.update(sheet_name.encode("utf-8"))
+    return digest.hexdigest()[:16]
+
+
+@st.cache_data(show_spinner=False)
+def _save_bytes(name: str, content: bytes) -> str:
+    """Persist uploaded bytes once per file so reruns reuse the same path."""
+    temp_dir = tempfile.mkdtemp(prefix="audita_upload_")
+    file_path = os.path.join(temp_dir, name)
+    with open(file_path, "wb") as f:
+        f.write(content)
+    return file_path
 
 
 def _save_uploaded_file(uploaded_file) -> str:
     """Save the uploaded file to a temp path and return the path."""
-    temp_dir = tempfile.mkdtemp(prefix="audita_upload_")
-    file_path = os.path.join(temp_dir, uploaded_file.name)
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getvalue())
-    return file_path
+    return _save_bytes(uploaded_file.name, uploaded_file.getvalue())
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +128,30 @@ if "thread_config" not in st.session_state:
 # ---------------------------------------------------------------------------
 
 if uploaded_file is not None:
-    file_hash = _file_hash(uploaded_file)
+    source_path = _save_uploaded_file(uploaded_file)
+
+    # Excel workbooks may hold several sheets — let the user pick which one
+    # to analyse, and key the cache on it so switching sheets re-runs.
+    selected_sheet: str | None = None
+    if is_excel_path(source_path):
+        try:
+            sheet_names = list_sheet_names(source_path)
+        except Exception as exc:  # unreadable / corrupt workbook
+            st.error(f"Could not read that Excel workbook: {exc}")
+            st.stop()
+
+        with st.sidebar:
+            if len(sheet_names) > 1:
+                selected_sheet = st.selectbox(
+                    "Sheet",
+                    sheet_names,
+                    help="Which worksheet to analyze.",
+                )
+            else:
+                selected_sheet = sheet_names[0]
+                st.caption(f"Sheet: **{selected_sheet}**")
+
+    file_hash = _file_hash(uploaded_file, selected_sheet)
     result_key = f"result_{file_hash}"
     state_key = f"state_{file_hash}"
     stage_key = f"stage_{file_hash}"
@@ -149,7 +181,6 @@ if uploaded_file is not None:
 
     else:
         # No cached result — run the pipeline
-        csv_path = _save_uploaded_file(uploaded_file)
 
         # Build graph
         if st.session_state.get("graph_instance") is None:
@@ -244,7 +275,9 @@ if uploaded_file is not None:
                 stage_progress("ingest")
 
             try:
-                initial_state = {"csv_path": csv_path}
+                initial_state: dict = {"source_path": source_path}
+                if selected_sheet:
+                    initial_state["sheet_name"] = selected_sheet
 
                 for event in graph.stream(
                     initial_state,
@@ -273,9 +306,10 @@ else:
         """
         ### 👋 Welcome to AUDITA
 
-        Upload a CSV file in the sidebar to get started. AUDITA will:
+        Upload a CSV or Excel file in the sidebar to get started. AUDITA will:
 
-        1. **Ingest** your data with automatic encoding/delimiter detection
+        1. **Ingest** your data — CSV with automatic encoding/delimiter
+           detection, or any sheet of an Excel workbook
         2. **Audit** data quality (missing values, outliers, duplicates)
         3. **Propose** a cleaning plan (AI-powered, human-approved)
         4. **Clean** your data with full before/after tracking

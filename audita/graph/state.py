@@ -60,7 +60,9 @@ class PipelineState(TypedDict):
     """Full state flowing through the AUDITA LangGraph pipeline."""
 
     # Ingest stage
-    csv_path: str
+    source_path: str  # user-supplied CSV or Excel file
+    sheet_name: str  # Excel sheet to read; ignored for CSV input
+    csv_path: str  # normalised CSV written by ingest, read by every later node
     raw_profile: dict
 
     # Quality audit stage

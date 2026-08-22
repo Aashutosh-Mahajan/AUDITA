@@ -6,7 +6,6 @@ chart registry. No LLM involvement. On failure, returns a ChartResult
 with FAILED status rather than raising.
 """
 
-
 from audita.core.audit_log import log_code_action
 from audita.core.chart_registry import render_chart
 from audita.core.frame_io import read_frame

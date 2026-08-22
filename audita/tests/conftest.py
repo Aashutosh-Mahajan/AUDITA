@@ -103,7 +103,9 @@ def stub_llm(monkeypatch):
     import audita.graph.nodes.self_check as self_check_node
 
     monkeypatch.setattr(
-        cleaning_plan_node, "request_cleaning_plan", lambda **_: list(stub.cleaning_plan)
+        cleaning_plan_node,
+        "request_cleaning_plan",
+        lambda **_: list(stub.cleaning_plan),
     )
     monkeypatch.setattr(
         insight_node, "request_viz_intents", lambda **_: list(stub.viz_intents)
@@ -114,7 +116,9 @@ def stub_llm(monkeypatch):
         lambda summaries: [
             {
                 "grounded": s["chart_type"] not in stub.ungrounded,
-                "notes": "forced failure" if s["chart_type"] in stub.ungrounded else "ok",
+                "notes": "forced failure"
+                if s["chart_type"] in stub.ungrounded
+                else "ok",
             }
             for s in summaries
         ],

@@ -183,9 +183,7 @@ if uploaded_file is not None:
             st.session_state["graph_instance"] = build_graph(with_checkpointer=True)
 
         graph = st.session_state["graph_instance"]
-        thread_config = {
-            "configurable": {"thread_id": f"{file_hash}-{run_index}"}
-        }
+        thread_config = {"configurable": {"thread_id": f"{file_hash}-{run_index}"}}
 
         # Check if we're resuming after human approval. Anything other than an
         # explicit "awaiting_approval" means we have no live checkpoint to
@@ -255,9 +253,9 @@ if uploaded_file is not None:
                     # Get the full final state — the assemble node writes
                     # "dashboard" into it, so no second assembly is needed.
                     full_state = graph.get_state(thread_config).values
-                    dashboard = full_state.get("dashboard") or assemble(
-                        full_state
-                    ).get("dashboard", {})
+                    dashboard = full_state.get("dashboard") or assemble(full_state).get(
+                        "dashboard", {}
+                    )
 
                     # Cache the result
                     st.session_state[result_key] = dashboard

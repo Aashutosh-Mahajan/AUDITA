@@ -78,7 +78,9 @@ class PipelineState(TypedDict):
 
     # Visualization stages
     proposed_visualizations: list[VizIntent]
-    completed_charts: Annotated[list[ChartResult], merge_charts]  # fan-in, dedup by intent
+    completed_charts: Annotated[
+        list[ChartResult], merge_charts
+    ]  # fan-in, dedup by intent
 
     # Audit trail — concurrent writes from parallel nodes
     audit_log: Annotated[list[AuditLogEntry], operator.add]

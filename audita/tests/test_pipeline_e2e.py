@@ -9,7 +9,7 @@ graph is actually driven through the human gate to a dashboard.
 import pandas as pd
 import pytest
 
-from audita.core.frame_io import read_frame
+from audita.core.frame_io import parquet_available, read_frame
 from audita.core.schemas import VerificationStatus
 from audita.graph.build_graph import build_graph
 
@@ -159,6 +159,10 @@ class TestExcelIngest:
 
 
 class TestDtypePreservation:
+    @pytest.mark.skipif(
+        not parquet_available(),
+        reason="dtype preservation needs a Parquet engine; frame_io falls back to CSV",
+    )
     def test_parsed_dates_survive_the_handoff_to_charting(self, csv_file, stub_llm):
         """Regression: intermediates went through to_csv/read_csv, so the
         datetime column parse_dates produced reverted to object."""
@@ -202,9 +206,9 @@ class TestCleaningRobustness:
         cleaned = read_frame(result["cleaned_csv_path"])
         assert "units" not in cleaned.columns
         assert cleaned["sales"].isna().sum() == 0, "later actions were lost"
-        assert any(
-            e.action == "skipped_failed_action" for e in result["audit_log"]
-        ), "the skipped action was not recorded in the audit trail"
+        assert any(e.action == "skipped_failed_action" for e in result["audit_log"]), (
+            "the skipped action was not recorded in the audit trail"
+        )
 
 
 @pytest.mark.parametrize("model_env", ["", None])

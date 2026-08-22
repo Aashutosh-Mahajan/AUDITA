@@ -6,7 +6,6 @@ Reusing the same function (not a near-duplicate) ensures before/after are
 directly comparable in the UI.
 """
 
-
 from audita.core.audit_log import log_code_action
 from audita.core.frame_io import read_frame
 from audita.graph.nodes.quality_audit import compute_column_audit

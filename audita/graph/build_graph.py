@@ -9,12 +9,12 @@ Linear edges:
 
 Key mechanics:
 - Fan-out: Send() from conditional edge after insight_planning
-- Fan-in: completed_charts uses operator.add (see state.py)
-- Retry loop: self_check routes failed charts back to chart_builder
+- Fan-in: completed_charts uses the merge_charts reducer (see state.py)
+- Retry loop: self_check Send()s failed charts back to chart_builder
 - Human gate: interrupt_before=["cleaning_exec"]
 """
 
-from typing import Any, Literal
+from typing import Any
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -57,20 +57,16 @@ def _fan_out_charts(state: dict) -> list[Send]:
     return sends
 
 
-def _check_retry_or_continue(
-    state: dict,
-) -> Literal["chart_builder_retry", "assemble"]:
-    """After self_check: route back to chart_builder if any charts need retry."""
-    completed_charts = state.get("completed_charts", [])
+def _retry_or_continue(state: dict) -> list[Send] | str:
+    """After self_check: re-dispatch charts marked RETRYING, else assemble.
 
-    retrying = [
-        c
-        for c in completed_charts
-        if c.verification_status == VerificationStatus.RETRYING
-    ]
-
-    if retrying:
-        return "chart_builder_retry"
+    Retries must go out as ``Send()`` payloads, exactly like the initial
+    fan-out — ``chart_builder`` reads ``state["intent"]`` and cannot run on
+    the plain pipeline state.
+    """
+    sends = _fan_out_retries(state)
+    if sends:
+        return sends
     return "assemble"
 
 
@@ -79,24 +75,18 @@ def _fan_out_retries(state: dict) -> list[Send]:
     completed_charts = state.get("completed_charts", [])
     cleaned_csv_path = state.get("cleaned_csv_path", "")
 
-    sends = []
-    non_retrying = []
-
-    for chart in completed_charts:
-        if chart.verification_status == VerificationStatus.RETRYING:
-            sends.append(
-                Send(
-                    "chart_builder",
-                    {
-                        "intent": chart.intent,
-                        "cleaned_csv_path": cleaned_csv_path,
-                    },
-                )
-            )
-        else:
-            non_retrying.append(chart)
-
-    return sends
+    return [
+        Send(
+            "chart_builder",
+            {
+                "intent": chart.intent,
+                "cleaned_csv_path": cleaned_csv_path,
+                "retry_count": chart.retry_count,
+            },
+        )
+        for chart in completed_charts
+        if chart.verification_status == VerificationStatus.RETRYING
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -146,14 +136,11 @@ def build_graph(with_checkpointer: bool = True) -> Any:
     # Fan-in: chart_builder → self_check
     graph.add_edge("chart_builder", "self_check")
 
-    # Conditional: self_check → retry or assemble
+    # Conditional: self_check → Send() retries, or on to assemble
     graph.add_conditional_edges(
         "self_check",
-        _check_retry_or_continue,
-        {
-            "chart_builder_retry": "chart_builder",
-            "assemble": "assemble",
-        },
+        _retry_or_continue,
+        ["chart_builder", "assemble"],
     )
 
     # Terminal edge

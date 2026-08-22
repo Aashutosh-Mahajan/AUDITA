@@ -26,6 +26,9 @@ def chart_builder(state: dict) -> dict:
     """
     intent: VizIntent = state["intent"]
     cleaned_csv_path: str = state["cleaned_csv_path"]
+    # Carried over on a retry dispatch so the attempt counter keeps climbing;
+    # without it a retried chart resets to 0 and the retry loop never ends.
+    retry_count: int = state.get("retry_count", 0)
 
     df = pd.read_csv(cleaned_csv_path)
 
@@ -38,6 +41,7 @@ def chart_builder(state: dict) -> dict:
             figure_json=figure_json,
             verification_status=VerificationStatus.VERIFIED,  # tentative until self_check
             verification_notes="",
+            retry_count=retry_count,
         )
 
         audit_entry = log_code_action(
@@ -56,6 +60,7 @@ def chart_builder(state: dict) -> dict:
             figure_json=None,
             verification_status=VerificationStatus.FAILED,
             error=str(e),
+            retry_count=retry_count,
         )
 
         audit_entry = log_code_action(

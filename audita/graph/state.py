@@ -81,5 +81,8 @@ class PipelineState(TypedDict):
     # Audit trail — concurrent writes from parallel nodes
     audit_log: Annotated[list[AuditLogEntry], operator.add]
 
+    # Final assembled dashboard payload consumed by ui/sections.py
+    dashboard: dict
+
     # Human-in-the-loop gate flag (Section 6)
     human_approved_cleaning: bool

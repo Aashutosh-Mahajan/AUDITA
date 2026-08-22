@@ -13,7 +13,7 @@ import tempfile
 import streamlit as st
 
 from audita.graph.build_graph import build_graph
-from audita.graph.nodes.assemble import assemble
+from audita.graph.nodes.assemble import assemble  # fallback if the graph errored
 from audita.ui.components import (
     cleaning_plan_approval,
     stage_progress,
@@ -219,12 +219,12 @@ if uploaded_file is not None:
                             with progress.container():
                                 stage_progress(node_name)
 
-                    # Get the full final state
+                    # Get the full final state — the assemble node writes
+                    # "dashboard" into it, so no second assembly is needed.
                     full_state = graph.get_state(thread_config).values
-
-                    # Assemble dashboard
-                    dashboard_result = assemble(full_state)
-                    dashboard = dashboard_result.get("dashboard", {})
+                    dashboard = full_state.get("dashboard") or assemble(
+                        full_state
+                    ).get("dashboard", {})
 
                     # Cache the result
                     st.session_state[result_key] = dashboard

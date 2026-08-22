@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-layer self-check verification: code-level recomputation + LLM grounding check with automatic retry loop (max 2 retries) and `FLAGGED` status fallback.
 - **OpenAI LLM Client**:
   - Centralized structured tool calling with retry and exponential backoff.
-  - Support for custom model configuration via `OPENAI_MODEL` in `.env` (defaults to `GPT-5.4-mini`).
+  - Support for custom model configuration via `OPENAI_MODEL` in `.env` (defaults to `gpt-5.4-mini`).
 - **Streamlit Web UI**:
   - Live streaming progress display via `graph.stream()`.
   - Checkbox-based cleaning plan review and approval interface.

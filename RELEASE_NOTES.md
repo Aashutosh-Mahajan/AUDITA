@@ -1,6 +1,6 @@
 # 🔍 AUDITA v1.0.0 — Official Release
 
-**AUDITA** is an auditable, self-verifying data cleaning and visualization agent powered by LangGraph, OpenAI (`GPT-5.4-mini`), pandas, Plotly, and Streamlit.
+**AUDITA** is an auditable, self-verifying data cleaning and visualization agent powered by LangGraph, OpenAI (`gpt-5.4-mini`), pandas, Plotly, and Streamlit.
 
 ---
 
@@ -40,7 +40,7 @@ AUDITA strictly prevents hallucinated or dangerous execution:
   - Verification badges (✅ Verified, ⚠️ Flagged, ❌ Failed).
   - Collapsible audit trail log.
 - **OpenAI Model Flexibility**:
-  - Configurable model selection via `OPENAI_MODEL` in `.env` (defaults to `GPT-5.4-mini`).
+  - Configurable model selection via `OPENAI_MODEL` in `.env` (defaults to `gpt-5.4-mini`).
 
 ---
 

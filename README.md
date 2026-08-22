@@ -143,7 +143,7 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and set:
 # OPENAI_API_KEY=sk-...
-# OPENAI_MODEL=GPT-5.4-mini
+# OPENAI_MODEL=gpt-5.4-mini
 ```
 
 ### Run the App
@@ -264,7 +264,7 @@ AUDITA/
 │       ├── test_schemas.py         # Schema validation tests
 │       ├── test_cleaning_registry.py # Cleaning handler tests
 │       └── test_chart_registry.py  # Chart renderer tests
-├── .env.example                    # OPENAI_API_KEY=, OPENAI_MODEL=GPT-5.4-mini
+├── .env.example                    # OPENAI_API_KEY=, OPENAI_MODEL=gpt-5.4-mini
 ├── .gitignore
 ├── requirements.txt
 ├── AUDITA_BUILD_SPEC.md            # Full build specification
@@ -327,7 +327,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 🙏 Acknowledgements
 
-- [OpenAI](https://openai.com/) — structured tool-calling with models like GPT-5.4-mini for proposals
+- [OpenAI](https://openai.com/) — structured tool-calling with models like gpt-5.4-mini for proposals
 - [LangGraph](https://github.com/langchain-ai/langgraph) — pipeline orchestration with fan-out/fan-in
 - [Plotly](https://plotly.com/) — interactive charting
 - [Streamlit](https://streamlit.io/) — dashboard UI

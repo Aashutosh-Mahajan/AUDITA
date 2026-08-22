@@ -156,10 +156,25 @@ CLEANING_REGISTRY: dict[
 }
 
 
+class ColumnNotFoundError(Exception):
+    """Raised when an action targets a column that is not in the DataFrame."""
+
+
 def execute_cleaning_action(df: pd.DataFrame, action: CleaningAction) -> pd.DataFrame:
     """Look up and execute a cleaning action from the registry.
 
-    Raises ``KeyError`` if the action type is not registered.
+    Raises ``KeyError`` if the action type is not registered, and
+    ``ColumnNotFoundError`` if the target column is absent — which happens
+    routinely when an earlier action in the same plan dropped it.
     """
+    if (
+        action.action_type != CleaningActionType.NO_ACTION
+        and action.column not in df.columns
+    ):
+        raise ColumnNotFoundError(
+            f"Column '{action.column}' is not in the DataFrame — it was most "
+            f"likely dropped by an earlier action in this plan"
+        )
+
     handler = CLEANING_REGISTRY[action.action_type]
     return handler(df, action)

@@ -81,8 +81,22 @@ def cleaning_exec(state: dict) -> dict:
         before_stats = _column_stats(df, action.column)
         rows_before = len(df)
 
-        # Execute
-        df = execute_cleaning_action(df, action)
+        # Execute — a single bad action must not abort the whole plan
+        try:
+            df = execute_cleaning_action(df, action)
+        except Exception as exc:
+            audit_entries.append(
+                log_code_action(
+                    stage="cleaning_exec",
+                    action="skipped_failed_action",
+                    detail={
+                        "column": action.column,
+                        "action_type": action.action_type.value,
+                        "error": str(exc),
+                    },
+                )
+            )
+            continue
 
         # Snapshot after
         after_stats = _column_stats(df, action.column)

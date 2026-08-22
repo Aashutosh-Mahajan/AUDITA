@@ -40,7 +40,7 @@ AUDITA is a data cleaning and visualization agent where the AI **never writes or
 
 | Feature | Description |
 |---------|-------------|
-| **Auto-Ingest** | Uploads CSV with automatic delimiter detection (`csv.Sniffer`) and encoding fallback (`chardet`) |
+| **Auto-Ingest** | Uploads CSV (automatic delimiter detection via `csv.Sniffer`, encoding fallback via `chardet`) or Excel workbooks with per-sheet selection |
 | **Quality Audit** | Per-column profiling: missing %, outliers (IQR), fuzzy near-duplicate labels, date-parse detection |
 | **AI Cleaning Plan** | LLM proposes cleaning actions from a fixed enum — validated against real columns before execution |
 | **Human-in-the-Loop** | Review and approve/reject individual cleaning actions before they run |
@@ -156,7 +156,7 @@ python -m streamlit run audita/app.py
 streamlit run audita/app.py
 ```
 
-The app will open at `http://localhost:8501`. Upload a CSV file to start.
+The app will open at `http://localhost:8501`. Upload a CSV or Excel file to start.
 
 ---
 
@@ -164,9 +164,18 @@ The app will open at `http://localhost:8501`. Upload a CSV file to start.
 
 ### 1. Upload Data
 
-Upload any CSV file via the sidebar. AUDITA automatically detects:
+Upload a CSV or Excel file via the sidebar.
+
+For **CSV/TSV**, AUDITA automatically detects:
 - **Delimiter** (comma, tab, semicolon, pipe) via `csv.Sniffer`
 - **Encoding** (UTF-8, Latin-1, etc.) via `chardet`
+
+For **Excel** (`.xlsx`, `.xlsm`, `.xltx`, `.xltm`, `.xls`), the sidebar lists
+the workbook's sheets so you can choose which one to analyze; single-sheet
+workbooks are selected automatically.
+
+Either way the data is normalized to one intermediate file (Parquet where
+available, so column dtypes such as parsed dates survive between stages).
 
 ### 2. Review Quality Audit
 
@@ -248,7 +257,7 @@ AUDITA/
 │   │   ├── state.py                # PipelineState TypedDict
 │   │   ├── build_graph.py          # LangGraph wiring (Send, fan-out/in, retry)
 │   │   └── nodes/
-│   │       ├── ingest.py           # CSV ingest (auto-delimiter, encoding)
+│   │       ├── ingest.py           # CSV/Excel ingest (auto-delimiter, encoding, sheet)
 │   │       ├── quality_audit.py    # Per-column profiling (pure code)
 │   │       ├── cleaning_plan.py    # LLM call #1 (propose cleaning)
 │   │       ├── cleaning_exec.py    # Dispatch cleaning + diff tracking

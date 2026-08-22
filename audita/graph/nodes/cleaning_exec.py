@@ -5,14 +5,13 @@ the deterministic cleaning registry.
 Snapshots before/after stats per column to build CleaningDiffEntry records.
 """
 
-import os
-import tempfile
 from typing import Any
 
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
 from audita.core.cleaning_registry import execute_cleaning_action
+from audita.core.frame_io import read_frame, write_frame
 from audita.core.schemas import (
     AuditLogEntry,
     CleaningAction,
@@ -61,7 +60,7 @@ def cleaning_exec(state: dict) -> dict:
     csv_path: str = state["csv_path"]
     cleaning_plan: list[CleaningAction] = state["cleaning_plan"]
 
-    df = pd.read_csv(csv_path)
+    df = read_frame(csv_path)
 
     diffs: list[CleaningDiffEntry] = []
     audit_entries: list[AuditLogEntry] = []
@@ -122,10 +121,8 @@ def cleaning_exec(state: dict) -> dict:
             )
         )
 
-    # Save cleaned DataFrame
-    temp_dir = tempfile.mkdtemp(prefix="audita_clean_")
-    cleaned_csv_path = os.path.join(temp_dir, "cleaned_data.csv")
-    df.to_csv(cleaned_csv_path, index=False)
+    # Save cleaned DataFrame — dtypes set by parse_dates must survive here
+    cleaned_csv_path = write_frame(df, prefix="audita_clean_", stem="cleaned_data")
 
     return {
         "cleaned_csv_path": cleaned_csv_path,

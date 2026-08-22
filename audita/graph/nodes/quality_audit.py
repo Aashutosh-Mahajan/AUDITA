@@ -11,6 +11,7 @@ from typing import Any
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
+from audita.core.frame_io import read_frame
 
 
 def compute_column_audit(df: pd.DataFrame) -> dict[str, Any]:
@@ -132,7 +133,7 @@ def quality_audit(state: dict) -> dict:
     metrics, and returns the ``quality_audit`` dict.
     """
     csv_path: str = state["csv_path"]
-    df = pd.read_csv(csv_path)
+    df = read_frame(csv_path)
 
     audit_result = compute_column_audit(df)
 

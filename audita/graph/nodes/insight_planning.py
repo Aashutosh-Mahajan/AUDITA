@@ -8,7 +8,6 @@ applies deterministic filtering (priority threshold + deduplication).
 
 from typing import Any
 
-import pandas as pd
 from pydantic import ValidationError
 
 from audita.core.audit_log import log_code_action, log_llm_action
@@ -16,6 +15,7 @@ from audita.core.chart_registry import (
     DtypeCompatibilityError,
     validate_chart_compatibility,
 )
+from audita.core.frame_io import read_frame
 from audita.core.llm_client import (
     _pydantic_list_to_tool_schema,
     request_viz_intents,
@@ -44,7 +44,7 @@ def _validate_intents(
 ) -> tuple[list[VizIntent], list[AuditLogEntry]]:
     """Validate LLM-proposed intents against real columns and dtype rules."""
     valid_columns = list(clean_profile.keys())
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     valid: list[VizIntent] = []
     rejections: list[AuditLogEntry] = []

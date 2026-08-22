@@ -6,9 +6,9 @@ Reusing the same function (not a near-duplicate) ensures before/after are
 directly comparable in the UI.
 """
 
-import pandas as pd
 
 from audita.core.audit_log import log_code_action
+from audita.core.frame_io import read_frame
 from audita.graph.nodes.quality_audit import compute_column_audit
 
 
@@ -19,7 +19,7 @@ def profiling(state: dict) -> dict:
     (the exact same function used in the quality_audit node).
     """
     cleaned_csv_path: str = state["cleaned_csv_path"]
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     clean_profile = compute_column_audit(df)
 

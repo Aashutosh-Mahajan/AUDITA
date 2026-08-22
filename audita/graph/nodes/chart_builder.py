@@ -6,10 +6,10 @@ chart registry. No LLM involvement. On failure, returns a ChartResult
 with FAILED status rather than raising.
 """
 
-import pandas as pd
 
 from audita.core.audit_log import log_code_action
 from audita.core.chart_registry import DtypeCompatibilityError, render_chart
+from audita.core.frame_io import read_frame
 from audita.core.schemas import (
     ChartResult,
     VerificationStatus,
@@ -30,7 +30,7 @@ def chart_builder(state: dict) -> dict:
     # without it a retried chart resets to 0 and the retry loop never ends.
     retry_count: int = state.get("retry_count", 0)
 
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     try:
         fig = render_chart(df, intent)

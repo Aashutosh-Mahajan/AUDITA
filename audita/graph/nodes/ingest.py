@@ -9,13 +9,13 @@ node has one dtype-stable contract to read.
 
 import csv
 import os
-import tempfile
 from typing import Any
 
 import chardet
 import pandas as pd
 
 from audita.core.audit_log import log_code_action
+from audita.core.frame_io import write_frame
 
 # ---------------------------------------------------------------------------
 # Format detection
@@ -131,10 +131,9 @@ def ingest(state: dict) -> dict:
     else:
         df, read_detail = _read_csv(source_path)
 
-    # Normalise to CSV so downstream nodes have a single input contract
-    temp_dir = tempfile.mkdtemp(prefix="audita_")
-    raw_csv_path = os.path.join(temp_dir, "raw_data.csv")
-    df.to_csv(raw_csv_path, index=False)
+    # Normalise to one intermediate file so downstream nodes have a single
+    # input contract, written in a format that preserves dtypes.
+    raw_csv_path = write_frame(df, prefix="audita_", stem="raw_data")
 
     raw_profile = _build_raw_profile(df, source_path)
 

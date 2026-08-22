@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from audita.core.audit_log import log_code_action, log_llm_action
+from audita.core.frame_io import read_frame
 from audita.core.llm_client import request_grounding_check
 from audita.core.schemas import (
     AuditLogEntry,
@@ -189,7 +190,7 @@ def self_check(state: dict) -> dict:
     completed_charts: list[ChartResult] = state["completed_charts"]
     cleaned_csv_path: str = state["cleaned_csv_path"]
 
-    df = pd.read_csv(cleaned_csv_path)
+    df = read_frame(cleaned_csv_path)
 
     audit_entries: list[AuditLogEntry] = []
     updated_charts: list[ChartResult] = []

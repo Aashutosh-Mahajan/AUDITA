@@ -193,27 +193,31 @@ if uploaded_file is not None:
                 # Resume the graph with the approved plan
                 st.session_state[stage_key] = "running_post_approval"
 
-                # Update state and resume
-                updated_state = {
-                    "cleaning_plan": approved_actions,
-                    "human_approved_cleaning": True,
-                }
+                # Write the approved plan into the interrupted checkpoint.
+                # Resuming REQUIRES streaming with input=None — passing a state
+                # dict here would start a fresh run from START instead of
+                # continuing from the human gate.
+                graph.update_state(
+                    thread_config,
+                    {
+                        "cleaning_plan": approved_actions,
+                        "human_approved_cleaning": True,
+                    },
+                )
 
                 progress = st.empty()
                 with progress.container():
                     stage_progress("cleaning_exec")
 
                 try:
-                    final_state = None
                     for event in graph.stream(
-                        updated_state,
+                        None,
                         config=thread_config,
                     ):
                         # Update progress display
                         for node_name in event:
                             with progress.container():
                                 stage_progress(node_name)
-                            final_state = event[node_name]
 
                     # Get the full final state
                     full_state = graph.get_state(thread_config).values

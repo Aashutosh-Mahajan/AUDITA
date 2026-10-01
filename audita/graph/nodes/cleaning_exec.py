@@ -50,6 +50,25 @@ def _column_stats(df: pd.DataFrame, col: str) -> dict[str, Any]:
     return stats
 
 
+def _count_changed_cells(before: pd.Series, after: pd.Series) -> int:
+    """Count rows whose value in a column differs between two snapshots.
+
+    A cell missing in both snapshots is never counted. When the column's dtype
+    changed (``parse_dates`` turning strings into Timestamps) every other cell
+    was rewritten, even though a midnight Timestamp prints as the very same
+    "2024-01-01" text, so string comparison alone would report 0.
+    """
+    before = before.reset_index(drop=True)
+    after = after.reset_index(drop=True)
+    both_missing = before.isna() & after.isna()
+
+    if before.dtype != after.dtype:
+        return int((~both_missing).sum())
+
+    differs = before.astype(str) != after.astype(str)
+    return int((differs & ~both_missing).sum())
+
+
 def cleaning_exec(state: dict) -> dict:
     """LangGraph node: execute approved cleaning actions sequentially.
 
@@ -80,6 +99,9 @@ def cleaning_exec(state: dict) -> dict:
         # Snapshot before
         before_stats = _column_stats(df, action.column)
         rows_before = len(df)
+        before_values = (
+            df[action.column].copy() if action.column in df.columns else None
+        )
 
         # Execute — a single bad action must not abort the whole plan
         try:
@@ -107,12 +129,14 @@ def cleaning_exec(state: dict) -> dict:
             rows_affected = rows_before - rows_after
         elif action.action_type == CleaningActionType.DROP_COLUMN:
             rows_affected = rows_before  # entire column removed
+        elif before_values is not None and action.column in df.columns:
+            # Imputation, capping, parsing and standardising all rewrite cells
+            # in place, so count the cells that actually changed. Deriving this
+            # from the missing-count delta reported 0 for every action that
+            # does not touch missingness.
+            rows_affected = _count_changed_cells(before_values, df[action.column])
         else:
-            # For imputation/capping/parsing: count how many cells changed
-            rows_affected = abs(
-                before_stats.get("missing_count", 0)
-                - after_stats.get("missing_count", 0)
-            )
+            rows_affected = 0
 
         diff = CleaningDiffEntry(
             column=action.column,

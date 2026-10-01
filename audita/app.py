@@ -43,8 +43,12 @@ st.markdown(
         max-width: 1200px;
         margin: 0 auto;
     }
+    /* Translucent tint instead of a fixed light colour: the metric text
+       follows the active Streamlit theme, so a hard-coded #f8f9fa card put
+       near-white text on a near-white card under the dark theme. */
     .stMetric {
-        background-color: #f8f9fa;
+        background-color: rgba(128, 128, 128, 0.08);
+        border: 1px solid rgba(128, 128, 128, 0.2);
         padding: 16px;
         border-radius: 8px;
     }

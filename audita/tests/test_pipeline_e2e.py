@@ -210,6 +210,41 @@ class TestCleaningRobustness:
             "the skipped action was not recorded in the audit trail"
         )
 
+    def test_rows_affected_counts_rewritten_cells(self, csv_file):
+        """Regression: rows_affected came from the missing-count delta, so any
+        action that rewrites values without changing missingness reported 0."""
+        from audita.core.schemas import CleaningAction, CleaningActionType
+        from audita.graph.nodes.cleaning_exec import cleaning_exec
+        from audita.graph.nodes.ingest import ingest
+
+        ingested = ingest({"source_path": csv_file})
+        plan = [
+            CleaningAction(
+                column="region",
+                action_type=CleaningActionType.STANDARDIZE_CATEGORIES,
+                rationale="x",
+            ),
+            CleaningAction(
+                column="date",
+                action_type=CleaningActionType.PARSE_DATES,
+                rationale="x",
+            ),
+            CleaningAction(
+                column="sales",
+                action_type=CleaningActionType.IMPUTE_MEDIAN,
+                rationale="x",
+            ),
+        ]
+
+        result = cleaning_exec(
+            {"csv_path": ingested["csv_path"], "cleaning_plan": plan}
+        )
+        affected = {d.column: d.rows_affected for d in result["cleaning_diff"]}
+
+        # Every label is re-cased or stripped, every date string is parsed,
+        # and only the four gaps in "sales" are filled.
+        assert affected == {"region": 60, "date": 60, "sales": 4}
+
 
 @pytest.mark.parametrize("model_env", ["", None])
 def test_default_model_is_a_valid_id(monkeypatch, model_env):
